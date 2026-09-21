@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TailoringResult, TailoredBulletDiff } from '../types/resume';
+import { TailoringResult, TailoredBulletDiff, LLMConfig } from '../types/resume';
 import { X, Check, CheckCheck, Sparkles, ArrowRight, Lightbulb, Plus, Tag } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -12,6 +12,7 @@ interface Props {
   onApplyAllBullets: (diffs: TailoredBulletDiff[]) => void;
   onApplySummary: (summary: string) => void;
   onAddSkill: (skill: string) => void;
+  llmConfig?: LLMConfig;
 }
 
 export const TailorAssistantModal: React.FC<Props> = ({
@@ -22,7 +23,8 @@ export const TailorAssistantModal: React.FC<Props> = ({
   onApplyBulletDiff,
   onApplyAllBullets,
   onApplySummary,
-  onAddSkill
+  onAddSkill,
+  llmConfig
 }) => {
   const [acceptedDiffs, setAcceptedDiffs] = useState<{ [key: string]: boolean }>({});
   const [summaryApplied, setSummaryApplied] = useState(false);
@@ -63,9 +65,14 @@ export const TailorAssistantModal: React.FC<Props> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">AI Tailoring Assistant & Diff Reviewer</h2>
-              <p className="text-xs text-slate-500">
-                Review tailored bullet points, targeted summary, and incorporated keywords
-              </p>
+              <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                <span>Review tailored bullet points, targeted summary, and incorporated keywords</span>
+                {llmConfig && (
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    Engine: {llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Anthropic Claude' : llmConfig.provider === 'gemini' ? 'Google Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Built-in Offline'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -94,7 +101,7 @@ export const TailorAssistantModal: React.FC<Props> = ({
             <div className="py-16 flex flex-col items-center justify-center text-center space-y-3">
               <div className="w-10 h-10 border-3 border-primary-600 border-t-transparent rounded-full animate-spin" />
               <div className="font-semibold text-sm text-slate-800">
-                Analyzing Job Description & Tailoring Experience...
+                Tailoring Experience with {llmConfig?.provider === 'anthropic' ? `Claude (${llmConfig.model})` : llmConfig?.provider === 'openai' ? `OpenAI (${llmConfig.model})` : llmConfig?.provider === 'gemini' ? `Gemini (${llmConfig.model})` : llmConfig?.provider === 'groq' ? `Groq (${llmConfig.model})` : llmConfig?.provider === 'ollama' ? `Local Ollama (${llmConfig.model})` : 'Offline Heuristic Engine'}...
               </div>
               <p className="text-xs text-slate-500 max-w-sm">
                 Aligning keywords, crafting action-oriented XYZ bullet points, and maximizing ATS match score.

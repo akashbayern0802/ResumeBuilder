@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { LLMConfig, ResumeTemplate, ResumeData } from '../types/resume';
+import React, { useRef, useState, useEffect } from 'react';
+import { LLMConfig, ResumeTemplate, ResumeData, LLMProviderType } from '../types/resume';
 import { SAMPLE_RESUMES, SAMPLE_JOB_DESCRIPTIONS } from '../data/samples';
 import { exportResumeToMarkdown, downloadFile, extractTextFromFile, parseExtractedTextToResume } from '../services/documentParser';
 import {
@@ -10,7 +10,14 @@ import {
   Upload,
   Layers,
   Settings,
-  Briefcase
+  Briefcase,
+  Bot,
+  Zap,
+  Cpu,
+  Server,
+  ShieldCheck,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 interface Props {
@@ -18,6 +25,7 @@ interface Props {
   onTemplateChange: (template: ResumeTemplate) => void;
   llmConfig: LLMConfig;
   onOpenSettings: () => void;
+  onQuickSelectProvider?: (provider: LLMProviderType) => void;
   resume: ResumeData;
   onResumeChange: (resume: ResumeData) => void;
   onLoadJobDescription: (title: string, company: string, text: string) => void;
@@ -32,6 +40,7 @@ export const Header: React.FC<Props> = ({
   onTemplateChange,
   llmConfig,
   onOpenSettings,
+  onQuickSelectProvider,
   resume,
   onResumeChange,
   onLoadJobDescription,
@@ -41,6 +50,67 @@ export const Header: React.FC<Props> = ({
   isDownloadingPdf
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEngineDropdownOpen, setIsEngineDropdownOpen] = useState(false);
+  const engineDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (engineDropdownRef.current && !engineDropdownRef.current.contains(e.target as Node)) {
+        setIsEngineDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getProviderInfo = (p: LLMProviderType, modelName: string) => {
+    switch (p) {
+      case 'anthropic':
+        return {
+          name: 'Claude',
+          detail: modelName.replace('-latest', '').replace('claude-', ''),
+          icon: <Zap className="w-3.5 h-3.5 text-amber-500" />,
+          badgeColor: 'text-amber-800 bg-amber-50 border-amber-200'
+        };
+      case 'openai':
+        return {
+          name: 'GPT',
+          detail: modelName,
+          icon: <Bot className="w-3.5 h-3.5 text-emerald-600" />,
+          badgeColor: 'text-emerald-800 bg-emerald-50 border-emerald-200'
+        };
+      case 'gemini':
+        return {
+          name: 'Gemini',
+          detail: modelName.replace('gemini-', ''),
+          icon: <Sparkles className="w-3.5 h-3.5 text-primary-600" />,
+          badgeColor: 'text-primary-800 bg-primary-50 border-primary-200'
+        };
+      case 'groq':
+        return {
+          name: 'Groq',
+          detail: 'LPU Cloud',
+          icon: <Cpu className="w-3.5 h-3.5 text-orange-600" />,
+          badgeColor: 'text-orange-800 bg-orange-50 border-orange-200'
+        };
+      case 'ollama':
+        return {
+          name: 'Ollama',
+          detail: 'Local',
+          icon: <Server className="w-3.5 h-3.5 text-purple-600" />,
+          badgeColor: 'text-purple-800 bg-purple-50 border-purple-200'
+        };
+      default:
+        return {
+          name: 'Offline NLP',
+          detail: 'Zero Cost',
+          icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />,
+          badgeColor: 'text-slate-800 bg-slate-50 border-slate-200'
+        };
+    }
+  };
+
+  const currentProviderInfo = getProviderInfo(llmConfig.provider, llmConfig.model);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,17 +218,182 @@ export const Header: React.FC<Props> = ({
 
           {/* Right Actions: AI Provider Badge, Template, Export */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* AI Provider Config Button */}
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 hover:border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-primary-600" />
-              <span className="hidden sm:inline">AI Engine:</span>
-              <span className="font-semibold capitalize text-primary-700">{llmConfig.provider}</span>
-              <Settings className="w-3 h-3 text-slate-400 ml-0.5" />
-            </button>
+            {/* AI Provider Quick Switcher & Settings */}
+            <div className="relative" ref={engineDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsEngineDropdownOpen(!isEngineDropdownOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all shadow-2xs ${currentProviderInfo.badgeColor} hover:brightness-95`}
+                title="Switch AI engine or configure API keys"
+              >
+                {currentProviderInfo.icon}
+                <span className="hidden sm:inline font-normal text-slate-500">AI:</span>
+                <span className="font-bold">{currentProviderInfo.name}</span>
+                <span className="hidden md:inline text-[10px] opacity-75 font-mono">({currentProviderInfo.detail})</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ml-0.5 ${isEngineDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isEngineDropdownOpen && (
+                <div className="absolute right-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Select AI Engine</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEngineDropdownOpen(false);
+                        onOpenSettings();
+                      }}
+                      className="text-[11px] font-semibold text-primary-600 hover:text-primary-800 flex items-center gap-1"
+                    >
+                      <Settings className="w-3 h-3" />
+                      Configure
+                    </button>
+                  </div>
+
+                  <div className="py-1">
+                    {/* Anthropic Claude */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('anthropic');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-amber-50 text-amber-600">
+                          <Zap className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">Anthropic Claude</div>
+                          <div className="text-[10px] text-slate-400">Claude 3.5 Sonnet, 3.7, Haiku</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'anthropic' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    {/* OpenAI GPT */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('openai');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-emerald-50 text-emerald-600">
+                          <Bot className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">OpenAI (GPT)</div>
+                          <div className="text-[10px] text-slate-400">gpt-4o-mini, gpt-4o, o3-mini</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'openai' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    {/* Google Gemini */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('gemini');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-blue-50 text-primary-600">
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">Google Gemini</div>
+                          <div className="text-[10px] text-slate-400">gemini-2.5-flash, gemini-3.8</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'gemini' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    {/* Groq Cloud */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('groq');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-orange-50 text-orange-600">
+                          <Cpu className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">Groq Cloud</div>
+                          <div className="text-[10px] text-slate-400">Llama 3.3 70B (High-Speed LPU)</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'groq' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    {/* Local Ollama */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('ollama');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-purple-50 text-purple-600">
+                          <Server className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">Local Ollama</div>
+                          <div className="text-[10px] text-slate-400">DeepSeek / Llama3 (100% Local)</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'ollama' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+
+                    {/* Built-in Offline */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onQuickSelectProvider?.('offline');
+                        setIsEngineDropdownOpen(false);
+                      }}
+                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-emerald-50 text-emerald-700">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-800">Built-in Offline</div>
+                          <div className="text-[10px] text-slate-400">Zero Cost • Heuristics • Private</div>
+                        </div>
+                      </div>
+                      {llmConfig.provider === 'offline' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                    </button>
+                  </div>
+
+                  <div className="border-t border-slate-100 p-2 bg-slate-50/70 rounded-b-xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEngineDropdownOpen(false);
+                        onOpenSettings();
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors shadow-2xs"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Configure Keys & Models...</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Template Selector */}
             <div className="hidden lg:flex items-center">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AtsAnalysisResult } from '../types/resume';
+import { AtsAnalysisResult, LLMConfig } from '../types/resume';
 import { Sparkles, Plus, AlertTriangle, CheckCircle2, TrendingUp, Zap, Target } from 'lucide-react';
 
 interface Props {
@@ -7,13 +7,15 @@ interface Props {
   onAddSkill: (skill: string) => void;
   onOpenTailorModal: () => void;
   isTailoring: boolean;
+  llmConfig?: LLMConfig;
 }
 
 export const AtsScoreCard: React.FC<Props> = ({
   analysis,
   onAddSkill,
   onOpenTailorModal,
-  isTailoring
+  isTailoring,
+  llmConfig
 }) => {
   const {
     overallScore,
@@ -56,16 +58,23 @@ export const AtsScoreCard: React.FC<Props> = ({
           <p className="text-xs text-slate-500 mt-0.5">Real-time keyword & ATS algorithm alignment</p>
         </div>
 
-        {/* Tailor CTA Button */}
-        <button
-          type="button"
-          onClick={onOpenTailorModal}
-          disabled={isTailoring}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 shadow-md shadow-primary-500/25 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4 animate-pulse" />
-          <span>{isTailoring ? 'Optimizing...' : 'Tailor with AI'}</span>
-        </button>
+        {/* Tailor CTA Button & Active Engine */}
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            onClick={onOpenTailorModal}
+            disabled={isTailoring}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 shadow-md shadow-primary-500/25 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            <span>{isTailoring ? 'Optimizing...' : 'Tailor with AI'}</span>
+          </button>
+          {llmConfig && (
+            <span className="text-[10px] text-slate-400 font-medium">
+              via <span className="font-semibold text-slate-600">{llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Claude' : llmConfig.provider === 'gemini' ? 'Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Offline'}</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Radial Score Gauge + Submetrics */}

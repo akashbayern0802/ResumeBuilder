@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { ResumeData, JobDescription, ResumeTemplate, LLMConfig, TailoredBulletDiff, TailoringResult } from './types/resume';
+import { ResumeData, JobDescription, ResumeTemplate, LLMConfig, LLMProviderType, TailoredBulletDiff, TailoringResult } from './types/resume';
 import { SAMPLE_RESUMES, SAMPLE_JOB_DESCRIPTIONS } from './data/samples';
 import { analyzeAtsMatch } from './services/atsAnalyzer';
-import { tailorResumeWithAI, DEFAULT_LLM_CONFIG } from './services/llmService';
+import { tailorResumeWithAI, DEFAULT_LLM_CONFIG, getProviderApiKey, getProviderModel } from './services/llmService';
 import { exportElementToPdf } from './services/pdfExporter';
 import { Header } from './components/Header';
 import { AtsScoreCard } from './components/AtsScoreCard';
@@ -31,12 +31,28 @@ export function App() {
 
   const [template, setTemplate] = useState<ResumeTemplate>('naukri');
   const [llmConfig, setLlmConfig] = useState<LLMConfig>(() => {
-    const savedProvider = (localStorage.getItem('RESUME_LLM_PROVIDER') as any) || DEFAULT_LLM_CONFIG.provider;
-    const savedKey = localStorage.getItem('RESUME_LLM_API_KEY') || '';
-    const savedModel = localStorage.getItem('RESUME_LLM_MODEL') || DEFAULT_LLM_CONFIG.model;
+    const savedProvider = (localStorage.getItem('RESUME_LLM_PROVIDER') as LLMProviderType) || DEFAULT_LLM_CONFIG.provider;
+    const savedKey = getProviderApiKey(savedProvider);
+    const savedModel = getProviderModel(savedProvider);
     const savedEndpoint = localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint;
     return { provider: savedProvider, apiKey: savedKey, model: savedModel, endpoint: savedEndpoint };
   });
+
+  const handleQuickSelectProvider = (newProvider: LLMProviderType) => {
+    const key = getProviderApiKey(newProvider);
+    const model = getProviderModel(newProvider);
+    const endpoint = localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint;
+    const newConfig: LLMConfig = {
+      provider: newProvider,
+      apiKey: key,
+      model,
+      endpoint
+    };
+    localStorage.setItem('RESUME_LLM_PROVIDER', newProvider);
+    localStorage.setItem('RESUME_LLM_API_KEY', key);
+    localStorage.setItem('RESUME_LLM_MODEL', model);
+    setLlmConfig(newConfig);
+  };
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
@@ -181,6 +197,7 @@ export function App() {
         onTemplateChange={setTemplate}
         llmConfig={llmConfig}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onQuickSelectProvider={handleQuickSelectProvider}
         resume={resume}
         onResumeChange={setResume}
         onLoadJobDescription={handleLoadJobDescription}
@@ -274,6 +291,7 @@ export function App() {
               onAddSkill={handleAddSkill}
               onOpenTailorModal={handleRunFullTailor}
               isTailoring={isTailoring}
+              llmConfig={llmConfig}
             />
 
             {/* 3. Resume Editor Pane */}
@@ -298,7 +316,7 @@ export function App() {
         </div>
       </main>
 
-      {/* Settings Modal (LLM Selection: Gemini, Groq, Ollama, Offline) */}
+      {/* Settings Modal (LLM Selection: Gemini, Groq, Ollama, Offline, Claude, OpenAI) */}
       <ProviderSettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -331,6 +349,7 @@ export function App() {
         onApplyAllBullets={handleApplyAllBullets}
         onApplySummary={handleApplySummary}
         onAddSkill={handleAddSkill}
+        llmConfig={llmConfig}
       />
     </div>
   );

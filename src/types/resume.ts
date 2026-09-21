@@ -105,7 +105,7 @@ export interface TailoringResult {
   interviewTips?: string[];
 }
 
-export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama';
+export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama' | 'openai' | 'anthropic';
 
 export interface LLMConfig {
   provider: LLMProviderType;

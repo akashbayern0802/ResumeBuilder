@@ -1,9 +1,54 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { ResumeData, JobDescription, TailoringResult, TailoredBulletDiff, LLMConfig, AtsAnalysisResult } from '../types/resume';
+import { ResumeData, JobDescription, TailoringResult, TailoredBulletDiff, LLMConfig, LLMProviderType, AtsAnalysisResult } from '../types/resume';
+
+export function getProviderApiKey(provider: LLMProviderType): string {
+  if (provider === 'offline') return '';
+  return (
+    localStorage.getItem(`RESUME_${provider.toUpperCase()}_API_KEY`) ||
+    localStorage.getItem('RESUME_LLM_API_KEY') ||
+    ''
+  );
+}
+
+export function setProviderApiKey(provider: LLMProviderType, key: string): void {
+  if (provider === 'offline') return;
+  localStorage.setItem(`RESUME_${provider.toUpperCase()}_API_KEY`, key.trim());
+  localStorage.setItem('RESUME_LLM_API_KEY', key.trim());
+}
+
+export function getProviderModel(provider: LLMProviderType): string {
+  const saved = localStorage.getItem(`RESUME_${provider.toUpperCase()}_MODEL`);
+  if (saved) return saved;
+  switch (provider) {
+    case 'gemini': return 'gemini-2.5-flash';
+    case 'openai': return 'gpt-4o-mini';
+    case 'anthropic': return 'claude-3-5-sonnet-latest';
+    case 'groq': return 'llama-3.3-70b-versatile';
+    case 'ollama': return 'llama3.2';
+    default: return 'offline';
+  }
+}
+
+export function setProviderModel(provider: LLMProviderType, model: string): void {
+  localStorage.setItem(`RESUME_${provider.toUpperCase()}_MODEL`, model);
+  localStorage.setItem('RESUME_LLM_MODEL', model);
+}
+
+export function getProviderDisplayName(provider: LLMProviderType): string {
+  switch (provider) {
+    case 'openai': return 'OpenAI (GPT)';
+    case 'anthropic': return 'Anthropic Claude';
+    case 'gemini': return 'Google Gemini';
+    case 'groq': return 'Groq Cloud';
+    case 'ollama': return 'Local Ollama';
+    case 'offline': return 'Built-in Offline';
+    default: return provider;
+  }
+}
 
 export const DEFAULT_LLM_CONFIG: LLMConfig = {
-  provider: 'offline',
-  model: 'gemini-2.5-flash',
+  provider: (localStorage.getItem('RESUME_LLM_PROVIDER') as LLMProviderType) || 'offline',
+  model: localStorage.getItem('RESUME_LLM_MODEL') || 'gemini-2.5-flash',
   apiKey: localStorage.getItem('RESUME_LLM_API_KEY') || '',
   endpoint: localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || 'http://localhost:11434'
 };
@@ -261,6 +306,110 @@ Output STRICT JSON with this exact schema:
       return JSON.parse(data.response);
     } catch (err) {
       console.warn('Ollama call failed, falling back to offline engine:', err);
+      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+    }
+  }
+
+  // --- OPENAI (GPT-4o, GPT-4o-mini, o3-mini, o1) ---
+  if (config.provider === 'openai') {
+    try {
+      const isReasoningModel = /^(o1|o3)/i.test(config.model || '');
+      const requestBody: Record<string, any> = {
+        model: config.model || 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the schema.'
+          },
+          {
+            role: 'user',
+            content: indianContextPrompt
+          }
+        ]
+      };
+
+      if (isReasoningModel) {
+        requestBody.max_completion_tokens = 4096;
+      } else {
+        requestBody.temperature = 0.2;
+        requestBody.response_format = { type: 'json_object' };
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `OpenAI API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      let content = data.choices?.[0]?.message?.content?.trim() || '';
+      if (content.startsWith('```')) {
+        content = content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      } else {
+        const startIdx = content.indexOf('{');
+        const endIdx = content.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          content = content.substring(startIdx, endIdx + 1);
+        }
+      }
+      return JSON.parse(content);
+    } catch (err) {
+      console.warn('OpenAI call failed, falling back to offline engine:', err);
+      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+    }
+  }
+
+  // --- ANTHROPIC CLAUDE (Claude 3.5 Sonnet, Haiku, Opus, 3.7 Sonnet) ---
+  if (config.provider === 'anthropic') {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': config.apiKey || '',
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: config.model || 'claude-3-5-sonnet-latest',
+          max_tokens: 4096,
+          system: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the requested schema with no markdown wrapping or surrounding commentary.',
+          messages: [
+            {
+              role: 'user',
+              content: indianContextPrompt
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Anthropic API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      let text = data.content?.[0]?.text?.trim() || '';
+      if (text.startsWith('```')) {
+        text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      } else {
+        const startIdx = text.indexOf('{');
+        const endIdx = text.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          text = text.substring(startIdx, endIdx + 1);
+        }
+      }
+      return JSON.parse(text);
+    } catch (err) {
+      console.warn('Anthropic call failed, falling back to offline engine:', err);
       return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
     }
   }
