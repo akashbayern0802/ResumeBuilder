@@ -103,6 +103,12 @@ export interface TailoringResult {
   bulletDiffs: TailoredBulletDiff[];
   recommendedSkillsToAdd: string[];
   interviewTips?: string[];
+  engineUsed?: {
+    provider: LLMProviderType;
+    model?: string;
+    isLive: boolean;
+    fallbackReason?: string;
+  };
 }
 
 export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama' | 'openai' | 'anthropic';

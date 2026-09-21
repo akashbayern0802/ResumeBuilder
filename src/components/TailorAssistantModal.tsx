@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TailoringResult, TailoredBulletDiff, LLMConfig } from '../types/resume';
-import { X, Check, CheckCheck, Sparkles, ArrowRight, Lightbulb, Plus, Tag } from 'lucide-react';
+import { X, Check, CheckCheck, Sparkles, ArrowRight, Lightbulb, Plus, Tag, ShieldCheck } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Props {
@@ -109,6 +109,48 @@ export const TailorAssistantModal: React.FC<Props> = ({
             </div>
           ) : tailoringResult ? (
             <>
+              {/* Engine Execution Status Banner */}
+              {tailoringResult.engineUsed?.isLive ? (
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <div>
+                      <span className="font-bold text-emerald-900">
+                        Live Cloud API Executed: {tailoringResult.engineUsed.provider === 'openai' ? 'OpenAI GPT' : tailoringResult.engineUsed.provider === 'anthropic' ? 'Anthropic Claude' : tailoringResult.engineUsed.provider.toUpperCase()}
+                      </span>
+                      <span className="text-emerald-700 ml-1.5 font-mono text-[11px]">
+                        [{tailoringResult.engineUsed.model}]
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Live API
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs shadow-2xs gap-2">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-1 rounded bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-amber-900">
+                        Built-in Offline Engine Used (Heuristic NLP)
+                      </div>
+                      <p className="text-[11px] text-amber-800/90 mt-0.5">
+                        {tailoringResult.engineUsed?.fallbackReason || 'Generated locally inside your browser with Google XYZ formula & ATS keywords.'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 self-start sm:self-center shrink-0">
+                    Local Offline
+                  </span>
+                </div>
+              )}
+
               {/* SECTION 1: TAILORED SUMMARY */}
               {tailoringResult.tailoredSummary && (
                 <div className="bg-gradient-to-br from-primary-50/50 to-indigo-50/30 border border-primary-100 rounded-xl p-4 space-y-2">

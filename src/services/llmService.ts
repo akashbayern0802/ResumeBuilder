@@ -167,6 +167,10 @@ export async function tailorResumeWithAI(
     const tailoredSummary = heuristicTailorSummary(resume, jobDescription, atsAnalysis.matchedKeywords);
     const recommendedSkillsToAdd = atsAnalysis.missingCriticalKeywords.slice(0, 8);
 
+    const fallbackReason = config.provider === 'offline'
+      ? 'Built-in offline engine selected (100% private, zero network calls).'
+      : `No API key entered for ${config.provider.toUpperCase()}. Switched automatically to offline engine.`;
+
     return {
       tailoredSummary,
       bulletDiffs: diffs,
@@ -175,7 +179,13 @@ export async function tailorResumeWithAI(
         `Prepare to articulate your experience with ${atsAnalysis.missingCriticalKeywords.slice(0, 3).join(', ')} in the context of Indian scale & regulatory compliance (e.g., RBI / NPCI guidelines).`,
         `Be ready to walk through your stakeholder governance framework for managing cross-functional onshore-offshore teams at ${resume.experience[0]?.company || 'your current organization'}.`,
         `Quantify your business impact during leadership discussions: emphasize portfolio size, revenue impact in ₹ Cr / $M, and squad velocity.`
-      ]
+      ],
+      engineUsed: {
+        provider: 'offline',
+        model: 'heuristic',
+        isLive: false,
+        fallbackReason
+      }
     };
   }
 
@@ -238,10 +248,26 @@ Output STRICT JSON with this exact schema:
       const response = await model.generateContent(indianContextPrompt);
       const text = response.response.text();
       const parsed: TailoringResult = JSON.parse(text);
-      return parsed;
-    } catch (err) {
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'gemini',
+          model: config.model || 'gemini-2.5-flash',
+          isLive: true
+        }
+      };
+    } catch (err: any) {
       console.warn('Gemini API call failed, falling back to offline engine:', err);
-      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: `Gemini API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+        }
+      };
     }
   }
 
@@ -276,10 +302,27 @@ Output STRICT JSON with this exact schema:
 
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
-      return JSON.parse(content);
-    } catch (err) {
+      const parsed = JSON.parse(content);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'groq',
+          model: config.model || 'llama-3.3-70b-versatile',
+          isLive: true
+        }
+      };
+    } catch (err: any) {
       console.warn('Groq call failed, falling back to offline engine:', err);
-      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: `Groq API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+        }
+      };
     }
   }
 
@@ -303,10 +346,27 @@ Output STRICT JSON with this exact schema:
       }
 
       const data = await response.json();
-      return JSON.parse(data.response);
-    } catch (err) {
+      const parsed = JSON.parse(data.response);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'ollama',
+          model: config.model || 'llama3.2',
+          isLive: true
+        }
+      };
+    } catch (err: any) {
       console.warn('Ollama call failed, falling back to offline engine:', err);
-      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: `Ollama connection error (${err?.message || 'Unreachable'}). Used offline engine instead.`
+        }
+      };
     }
   }
 
@@ -360,10 +420,27 @@ Output STRICT JSON with this exact schema:
           content = content.substring(startIdx, endIdx + 1);
         }
       }
-      return JSON.parse(content);
-    } catch (err) {
+      const parsed = JSON.parse(content);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'openai',
+          model: config.model || 'gpt-4o-mini',
+          isLive: true
+        }
+      };
+    } catch (err: any) {
       console.warn('OpenAI call failed, falling back to offline engine:', err);
-      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: `OpenAI API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+        }
+      };
     }
   }
 
@@ -407,12 +484,41 @@ Output STRICT JSON with this exact schema:
           text = text.substring(startIdx, endIdx + 1);
         }
       }
-      return JSON.parse(text);
-    } catch (err) {
+      const parsed = JSON.parse(text);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'anthropic',
+          model: config.model || 'claude-3-5-sonnet-latest',
+          isLive: true
+        }
+      };
+    } catch (err: any) {
       console.warn('Anthropic call failed, falling back to offline engine:', err);
-      return tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: `Anthropic API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+        }
+      };
     }
   }
 
-  return heuristicTailorBullets(resume, atsAnalysis.missingCriticalKeywords) as any;
+  const diffs = heuristicTailorBullets(resume, atsAnalysis.missingCriticalKeywords);
+  const tailoredSummary = heuristicTailorSummary(resume, jobDescription, atsAnalysis.matchedKeywords);
+  return {
+    tailoredSummary,
+    bulletDiffs: diffs,
+    recommendedSkillsToAdd: atsAnalysis.missingCriticalKeywords.slice(0, 8),
+    engineUsed: {
+      provider: 'offline',
+      model: 'heuristic',
+      isLive: false,
+      fallbackReason: 'Built-in offline engine used.'
+    }
+  };
 }
