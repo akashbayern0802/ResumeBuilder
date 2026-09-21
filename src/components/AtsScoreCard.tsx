@@ -8,6 +8,7 @@ interface Props {
   onOpenTailorModal: () => void;
   isTailoring: boolean;
   llmConfig?: LLMConfig;
+  onOpenSettings?: () => void;
 }
 
 export const AtsScoreCard: React.FC<Props> = ({
@@ -15,7 +16,8 @@ export const AtsScoreCard: React.FC<Props> = ({
   onAddSkill,
   onOpenTailorModal,
   isTailoring,
-  llmConfig
+  llmConfig,
+  onOpenSettings
 }) => {
   const {
     overallScore,
@@ -70,9 +72,34 @@ export const AtsScoreCard: React.FC<Props> = ({
             <span>{isTailoring ? 'Optimizing...' : 'Tailor with AI'}</span>
           </button>
           {llmConfig && (
-            <span className="text-[10px] text-slate-400 font-medium">
-              via <span className="font-semibold text-slate-600">{llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Claude' : llmConfig.provider === 'gemini' ? 'Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Offline'}</span>
-            </span>
+            (() => {
+              const isMissingKey = Boolean(llmConfig.provider !== 'offline' && llmConfig.provider !== 'ollama' && !llmConfig.apiKey);
+              const providerName = llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Claude' : llmConfig.provider === 'gemini' ? 'Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Offline';
+
+              if (isMissingKey) {
+                return (
+                  <div className="flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 border border-amber-200/90 px-2 py-0.5 rounded-md font-medium">
+                    <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                    <span>{providerName}: No Key (Offline Fallback)</span>
+                    {onOpenSettings && (
+                      <button
+                        type="button"
+                        onClick={onOpenSettings}
+                        className="underline font-bold text-amber-900 hover:text-amber-950 ml-0.5 cursor-pointer"
+                      >
+                        Add Key
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <span className="text-[10px] text-slate-400 font-medium">
+                  via <span className="font-semibold text-slate-600">{providerName}</span>
+                </span>
+              );
+            })()
           )}
         </div>
       </div>

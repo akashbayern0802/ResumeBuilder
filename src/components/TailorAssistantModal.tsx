@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TailoringResult, TailoredBulletDiff, LLMConfig } from '../types/resume';
-import { X, Check, CheckCheck, Sparkles, ArrowRight, Lightbulb, Plus, Tag, ShieldCheck } from 'lucide-react';
+import { X, Check, CheckCheck, Sparkles, ArrowRight, Lightbulb, Plus, Tag, ShieldCheck, AlertTriangle, Settings } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   onApplySummary: (summary: string) => void;
   onAddSkill: (skill: string) => void;
   llmConfig?: LLMConfig;
+  onOpenSettings?: () => void;
 }
 
 export const TailorAssistantModal: React.FC<Props> = ({
@@ -24,7 +25,8 @@ export const TailorAssistantModal: React.FC<Props> = ({
   onApplyAllBullets,
   onApplySummary,
   onAddSkill,
-  llmConfig
+  llmConfig,
+  onOpenSettings
 }) => {
   const [acceptedDiffs, setAcceptedDiffs] = useState<{ [key: string]: boolean }>({});
   const [summaryApplied, setSummaryApplied] = useState(false);
@@ -130,26 +132,90 @@ export const TailorAssistantModal: React.FC<Props> = ({
                     Live API
                   </span>
                 </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-amber-50/90 border border-amber-200 text-xs shadow-2xs gap-2">
-                  <div className="flex items-start gap-2.5">
-                    <div className="p-1 rounded bg-amber-100 text-amber-700 shrink-0 mt-0.5">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-amber-900">
-                        Built-in Offline Engine Used (Heuristic NLP)
+              ) : (() => {
+                const requestedProvider = tailoringResult.engineUsed?.requestedProvider || (llmConfig?.provider !== 'offline' ? llmConfig?.provider : undefined);
+                const isFallback = Boolean(requestedProvider && requestedProvider !== 'offline');
+                const providerLabel = requestedProvider === 'anthropic' ? 'Anthropic Claude'
+                  : requestedProvider === 'openai' ? 'OpenAI GPT'
+                  : requestedProvider === 'gemini' ? 'Google Gemini'
+                  : requestedProvider === 'groq' ? 'Groq Cloud'
+                  : requestedProvider === 'ollama' ? 'Local Ollama'
+                  : requestedProvider || 'Cloud API';
+
+                if (isFallback) {
+                  return (
+                    <div className="flex flex-col p-4 rounded-xl bg-amber-50/95 border-l-4 border-l-amber-500 border border-amber-200 text-xs shadow-xs space-y-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                          <div className="p-1.5 rounded-lg bg-amber-200/80 text-amber-800 shrink-0">
+                            <AlertTriangle className="w-4 h-4" />
+                          </div>
+                          <span>Offline Heuristic Engine Used (Cloud AI Fallback Active)</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 self-start sm:self-center">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800 border border-rose-200">
+                            API Inactive / Fallback
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">
+                            Offline NLP Active
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-[11px] text-amber-800/90 mt-0.5">
-                        {tailoringResult.engineUsed?.fallbackReason || 'Generated locally inside your browser with Google XYZ formula & ATS keywords.'}
-                      </p>
+
+                      <div className="p-3 bg-white/90 rounded-lg border border-amber-200/80 text-slate-800 space-y-1.5">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <span className="text-slate-500 font-medium">Requested Provider:</span>
+                          <span className="font-bold text-slate-900">{providerLabel}</span>
+                        </div>
+                        <div className="text-xs text-slate-700 leading-relaxed">
+                          <span className="font-semibold text-rose-800">Reason for Fallback: </span>
+                          <span>
+                            {tailoringResult.engineUsed?.fallbackReason ||
+                              'Cloud API key or API usage credits were unavailable. The application safely fell back to the built-in offline engine so tailoring was not interrupted.'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-0.5 text-[11px] text-amber-900/90">
+                        <span>
+                          💡 <em>Your tailored bullets and summary below were successfully generated locally using the offline Google XYZ engine (100% free & private).</em>
+                        </span>
+                        {onOpenSettings && (
+                          <button
+                            type="button"
+                            onClick={onOpenSettings}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-950 bg-amber-200 hover:bg-amber-300 border border-amber-300 transition-colors shadow-2xs shrink-0 cursor-pointer"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                            <span>Configure API Key & Credits</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
+                  );
+                }
+
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs shadow-2xs gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <div className="p-1 rounded bg-slate-200 text-slate-700 shrink-0 mt-0.5">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-900">
+                          Built-in Offline Engine Active (100% Free & Private)
+                        </div>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          {tailoringResult.engineUsed?.fallbackReason || 'Generated locally inside your browser with Google XYZ formula & ATS keywords.'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-800 border border-slate-300 self-start sm:self-center shrink-0">
+                      Local Offline
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300 self-start sm:self-center shrink-0">
-                    Local Offline
-                  </span>
-                </div>
-              )}
+                );
+              })()}
 
               {/* SECTION 1: TAILORED SUMMARY */}
               {tailoringResult.tailoredSummary && (

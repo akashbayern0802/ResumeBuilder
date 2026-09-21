@@ -108,6 +108,7 @@ export interface TailoringResult {
     model?: string;
     isLive: boolean;
     fallbackReason?: string;
+    requestedProvider?: LLMProviderType;
   };
 }
 

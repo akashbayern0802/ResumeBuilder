@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { LLMConfig, ResumeTemplate, ResumeData, LLMProviderType } from '../types/resume';
 import { SAMPLE_RESUMES, SAMPLE_JOB_DESCRIPTIONS } from '../data/samples';
 import { exportResumeToMarkdown, downloadFile, extractTextFromFile, parseExtractedTextToResume } from '../services/documentParser';
+import { getProviderApiKey } from '../services/llmService';
 import {
   FileText,
   Sparkles,
@@ -64,34 +65,35 @@ export const Header: React.FC<Props> = ({
   }, []);
 
   const getProviderInfo = (p: LLMProviderType, modelName: string) => {
+    const hasKey = p === 'offline' || p === 'ollama' || Boolean(getProviderApiKey(p));
     switch (p) {
       case 'anthropic':
         return {
           name: 'Claude',
-          detail: modelName.replace('-latest', '').replace('claude-', ''),
+          detail: hasKey ? modelName.replace('-latest', '').replace('claude-', '') : 'No Key (Offline Fallback)',
           icon: <Zap className="w-3.5 h-3.5 text-amber-500" />,
-          badgeColor: 'text-amber-800 bg-amber-50 border-amber-200'
+          badgeColor: hasKey ? 'text-amber-800 bg-amber-50 border-amber-200' : 'text-amber-900 bg-amber-100 border-amber-300'
         };
       case 'openai':
         return {
           name: 'GPT',
-          detail: modelName,
+          detail: hasKey ? modelName : 'No Key (Offline Fallback)',
           icon: <Bot className="w-3.5 h-3.5 text-emerald-600" />,
-          badgeColor: 'text-emerald-800 bg-emerald-50 border-emerald-200'
+          badgeColor: hasKey ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-amber-900 bg-amber-100 border-amber-300'
         };
       case 'gemini':
         return {
           name: 'Gemini',
-          detail: modelName.replace('gemini-', ''),
+          detail: hasKey ? modelName.replace('gemini-', '') : 'No Key (Offline Fallback)',
           icon: <Sparkles className="w-3.5 h-3.5 text-primary-600" />,
-          badgeColor: 'text-primary-800 bg-primary-50 border-primary-200'
+          badgeColor: hasKey ? 'text-primary-800 bg-primary-50 border-primary-200' : 'text-amber-900 bg-amber-100 border-amber-300'
         };
       case 'groq':
         return {
           name: 'Groq',
-          detail: 'LPU Cloud',
+          detail: hasKey ? 'LPU Cloud' : 'No Key (Offline Fallback)',
           icon: <Cpu className="w-3.5 h-3.5 text-orange-600" />,
-          badgeColor: 'text-orange-800 bg-orange-50 border-orange-200'
+          badgeColor: hasKey ? 'text-orange-800 bg-orange-50 border-orange-200' : 'text-amber-900 bg-amber-100 border-amber-300'
         };
       case 'ollama':
         return {
@@ -252,88 +254,136 @@ export const Header: React.FC<Props> = ({
 
                   <div className="py-1">
                     {/* Anthropic Claude */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onQuickSelectProvider?.('anthropic');
-                        setIsEngineDropdownOpen(false);
-                      }}
-                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-amber-50 text-amber-600">
-                          <Zap className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">Anthropic Claude</div>
-                          <div className="text-[10px] text-slate-400">Claude 3.5 Sonnet, 3.7, Haiku</div>
-                        </div>
-                      </div>
-                      {llmConfig.provider === 'anthropic' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
-                    </button>
+                    {(() => {
+                      const hasAnthropicKey = Boolean(getProviderApiKey('anthropic'));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onQuickSelectProvider?.('anthropic');
+                            setIsEngineDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-amber-50 text-amber-600">
+                              <Zap className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800">Anthropic Claude</span>
+                                {hasAnthropicKey ? (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Live API</span>
+                                ) : (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">No Key (Fallback)</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400">Claude 3.5 Sonnet, 3.7, Haiku</div>
+                            </div>
+                          </div>
+                          {llmConfig.provider === 'anthropic' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </button>
+                      );
+                    })()}
 
                     {/* OpenAI GPT */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onQuickSelectProvider?.('openai');
-                        setIsEngineDropdownOpen(false);
-                      }}
-                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-emerald-50 text-emerald-600">
-                          <Bot className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">OpenAI (GPT)</div>
-                          <div className="text-[10px] text-slate-400">gpt-4o-mini, gpt-4o, o3-mini</div>
-                        </div>
-                      </div>
-                      {llmConfig.provider === 'openai' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
-                    </button>
+                    {(() => {
+                      const hasOpenAiKey = Boolean(getProviderApiKey('openai'));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onQuickSelectProvider?.('openai');
+                            setIsEngineDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-emerald-50 text-emerald-600">
+                              <Bot className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800">OpenAI (GPT)</span>
+                                {hasOpenAiKey ? (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Live API</span>
+                                ) : (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">No Key (Fallback)</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400">gpt-4o-mini, gpt-4o, o3-mini</div>
+                            </div>
+                          </div>
+                          {llmConfig.provider === 'openai' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </button>
+                      );
+                    })()}
 
                     {/* Google Gemini */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onQuickSelectProvider?.('gemini');
-                        setIsEngineDropdownOpen(false);
-                      }}
-                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-blue-50 text-primary-600">
-                          <Sparkles className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">Google Gemini</div>
-                          <div className="text-[10px] text-slate-400">gemini-2.5-flash, gemini-3.8</div>
-                        </div>
-                      </div>
-                      {llmConfig.provider === 'gemini' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
-                    </button>
+                    {(() => {
+                      const hasGeminiKey = Boolean(getProviderApiKey('gemini'));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onQuickSelectProvider?.('gemini');
+                            setIsEngineDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-blue-50 text-primary-600">
+                              <Sparkles className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800">Google Gemini</span>
+                                {hasGeminiKey ? (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Live API</span>
+                                ) : (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">No Key (Fallback)</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400">gemini-2.5-flash, gemini-3.8</div>
+                            </div>
+                          </div>
+                          {llmConfig.provider === 'gemini' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </button>
+                      );
+                    })()}
 
                     {/* Groq Cloud */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onQuickSelectProvider?.('groq');
-                        setIsEngineDropdownOpen(false);
-                      }}
-                      className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 rounded bg-orange-50 text-orange-600">
-                          <Cpu className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">Groq Cloud</div>
-                          <div className="text-[10px] text-slate-400">Llama 3.3 70B (High-Speed LPU)</div>
-                        </div>
-                      </div>
-                      {llmConfig.provider === 'groq' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
-                    </button>
+                    {(() => {
+                      const hasGroqKey = Boolean(getProviderApiKey('groq'));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onQuickSelectProvider?.('groq');
+                            setIsEngineDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-orange-50 text-orange-600">
+                              <Cpu className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800">Groq Cloud</span>
+                                {hasGroqKey ? (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Live API</span>
+                                ) : (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">No Key (Fallback)</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400">Llama 3.3 70B (High-Speed LPU)</div>
+                            </div>
+                          </div>
+                          {llmConfig.provider === 'groq' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </button>
+                      );
+                    })()}
 
                     {/* Local Ollama */}
                     <button
@@ -349,7 +399,10 @@ export const Header: React.FC<Props> = ({
                           <Server className="w-3.5 h-3.5" />
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-800">Local Ollama</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">Local Ollama</span>
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-50 text-purple-700 border border-purple-200">Local</span>
+                          </div>
                           <div className="text-[10px] text-slate-400">DeepSeek / Llama3 (100% Local)</div>
                         </div>
                       </div>
@@ -370,7 +423,10 @@ export const Header: React.FC<Props> = ({
                           <ShieldCheck className="w-3.5 h-3.5" />
                         </div>
                         <div>
-                          <div className="font-semibold text-slate-800">Built-in Offline</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800">Built-in Offline</span>
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">100% Free</span>
+                          </div>
                           <div className="text-[10px] text-slate-400">Zero Cost • Heuristics • Private</div>
                         </div>
                       </div>

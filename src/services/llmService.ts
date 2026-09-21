@@ -151,6 +151,43 @@ function heuristicTailorSummary(
   return `${expPrefix} driving high-impact product transformation, consulting engagements, and enterprise modernization across IT, Banking, and FinTech ecosystems. Proven mastery in ${topSkills || 'strategic product management and cross-functional leadership'}. Track record of steering multi-million/₹ Cr portfolios, managing distributed onshore-offshore delivery squads, and delivering mission-critical platforms aligned with regulatory standards (RBI/NPCI/ISO) at ${jd.company || 'tier-1 corporate organizations'}.`;
 }
 
+function formatFallbackReason(providerName: string, err: any): string {
+  const msg = (err?.message || String(err) || 'Service request failed').trim();
+  const lower = msg.toLowerCase();
+
+  if (
+    lower.includes('quota') ||
+    lower.includes('credit') ||
+    lower.includes('balance') ||
+    lower.includes('billing') ||
+    lower.includes('insufficient_quota') ||
+    lower.includes('exceeded your current quota') ||
+    lower.includes('resource_exhausted') ||
+    lower.includes('402') ||
+    lower.includes('payment') ||
+    lower.includes('plans & billing')
+  ) {
+    return `Unavailability of API Credits / Quota: Your ${providerName} account has exhausted its usage credits or exceeded quota (${msg}). The application safely fell back to the offline engine.`;
+  }
+
+  if (
+    lower.includes('unauthorized') ||
+    lower.includes('invalid api key') ||
+    lower.includes('incorrect api key') ||
+    lower.includes('401') ||
+    lower.includes('403') ||
+    lower.includes('authentication')
+  ) {
+    return `API Key Authentication Failed: ${providerName} rejected the configured API key (${msg}). Switched to offline engine.`;
+  }
+
+  if (lower.includes('rate limit') || lower.includes('429') || lower.includes('too many requests')) {
+    return `API Rate Limit Reached: ${providerName} request rate limit exceeded (${msg}). Switched to offline engine.`;
+  }
+
+  return `${providerName} API Unavailable: ${msg}. Switched to offline engine.`;
+}
+
 /**
  * Main Tailoring Service executing either offline NLP, Gemini, Groq, or Ollama
  * Configured specifically for the Indian job market ecosystem (Naukri, IIMJobs, LinkedIn India).
@@ -169,7 +206,7 @@ export async function tailorResumeWithAI(
 
     const fallbackReason = config.provider === 'offline'
       ? 'Built-in offline engine selected (100% private, zero network calls).'
-      : `No API key entered for ${config.provider.toUpperCase()}. Switched automatically to offline engine.`;
+      : `Unavailability of API Key: No API key is currently configured for ${getProviderDisplayName(config.provider)}. Switched automatically to the offline heuristic engine.`;
 
     return {
       tailoredSummary,
@@ -184,7 +221,8 @@ export async function tailorResumeWithAI(
         provider: 'offline',
         model: 'heuristic',
         isLive: false,
-        fallbackReason
+        fallbackReason,
+        requestedProvider: config.provider !== 'offline' ? config.provider : undefined
       }
     };
   }
@@ -265,7 +303,8 @@ Output STRICT JSON with this exact schema:
           provider: 'offline',
           model: 'heuristic',
           isLive: false,
-          fallbackReason: `Gemini API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+          fallbackReason: formatFallbackReason('Google Gemini', err),
+          requestedProvider: 'gemini'
         }
       };
     }
@@ -297,7 +336,8 @@ Output STRICT JSON with this exact schema:
       });
 
       if (!response.ok) {
-        throw new Error(`Groq API error: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Groq API error: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -320,7 +360,8 @@ Output STRICT JSON with this exact schema:
           provider: 'offline',
           model: 'heuristic',
           isLive: false,
-          fallbackReason: `Groq API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+          fallbackReason: formatFallbackReason('Groq Cloud', err),
+          requestedProvider: 'groq'
         }
       };
     }
@@ -364,7 +405,8 @@ Output STRICT JSON with this exact schema:
           provider: 'offline',
           model: 'heuristic',
           isLive: false,
-          fallbackReason: `Ollama connection error (${err?.message || 'Unreachable'}). Used offline engine instead.`
+          fallbackReason: formatFallbackReason('Local Ollama', err),
+          requestedProvider: 'ollama'
         }
       };
     }
@@ -438,7 +480,8 @@ Output STRICT JSON with this exact schema:
           provider: 'offline',
           model: 'heuristic',
           isLive: false,
-          fallbackReason: `OpenAI API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+          fallbackReason: formatFallbackReason('OpenAI GPT', err),
+          requestedProvider: 'openai'
         }
       };
     }
@@ -502,7 +545,8 @@ Output STRICT JSON with this exact schema:
           provider: 'offline',
           model: 'heuristic',
           isLive: false,
-          fallbackReason: `Anthropic API error (${err?.message || 'Call failed'}). Used offline engine instead.`
+          fallbackReason: formatFallbackReason('Anthropic Claude', err),
+          requestedProvider: 'anthropic'
         }
       };
     }

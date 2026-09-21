@@ -13,7 +13,7 @@ import { ProviderSettingsModal } from './components/ProviderSettingsModal';
 import { TailorAssistantModal } from './components/TailorAssistantModal';
 import { JobDescriptionModal } from './components/JobDescriptionModal';
 import { ResumeUploadModal } from './components/ResumeUploadModal';
-import { Eye, Edit3, Briefcase, Sparkles, UploadCloud } from 'lucide-react';
+import { Eye, Edit3, Briefcase, Sparkles, UploadCloud, AlertTriangle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export function App() {
@@ -230,6 +230,17 @@ export function App() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {llmConfig.provider !== 'offline' && llmConfig.provider !== 'ollama' && !llmConfig.apiKey && (
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className="hidden md:inline-flex items-center gap-1 text-[11px] text-amber-300 hover:text-amber-200 font-medium bg-white/10 hover:bg-white/15 px-2.5 py-1.5 rounded-xl border border-amber-300/30 transition-colors"
+                title="Your selected cloud provider has no API key. Click to configure key or offline engine will be used."
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span>Offline Fallback Active</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setIsJdModalOpen(true)}
@@ -292,6 +303,7 @@ export function App() {
               onOpenTailorModal={handleRunFullTailor}
               isTailoring={isTailoring}
               llmConfig={llmConfig}
+              onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
             {/* 3. Resume Editor Pane */}
@@ -350,6 +362,7 @@ export function App() {
         onApplySummary={handleApplySummary}
         onAddSkill={handleAddSkill}
         llmConfig={llmConfig}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
     </div>
   );
