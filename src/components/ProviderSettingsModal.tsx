@@ -11,7 +11,8 @@ import {
   setBedrockProject,
   getBedrockEndpoint,
   setBedrockEndpoint,
-  resolveBedrockBaseUrl
+  resolveBedrockBaseUrl,
+  isBedrockClaudeModel
 } from '../services/llmService';
 
 interface Props {
@@ -280,11 +281,11 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
         return;
       }
       try {
-        const isGptModel = !model.toLowerCase().startsWith('claude');
+        const isClaude = isBedrockClaudeModel(model);
         const targetBase = resolveBedrockBaseUrl(endpoint);
         const projectHeader = bedrockProject.trim() || 'default';
 
-        if (isGptModel) {
+        if (!isClaude) {
           const res = await fetch(`${targetBase}/v1/chat/completions`, {
             method: 'POST',
             headers: {
@@ -307,16 +308,16 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
             setTestMessage(err.error?.message || `Bedrock Mantle returned HTTP ${res.status}: ${res.statusText}`);
           }
         } else {
+          // IMPORTANT: AWS Bedrock Mantle requires ONLY 'x-api-key'. Do NOT include 'Authorization'!
           const res = await fetch(`${targetBase}/anthropic/v1/messages`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'x-api-key': apiKey.trim(),
-              'Authorization': `Bearer ${apiKey.trim()}`,
               'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-              model: model || 'claude-opus-5',
+              model: model || 'anthropic.claude-haiku-4-5',
               max_tokens: 5,
               messages: [{ role: 'user', content: 'Say OK' }]
             })

@@ -76,6 +76,12 @@ export function resolveBedrockBaseUrl(rawUrl?: string): string {
   return custom;
 }
 
+export function isBedrockClaudeModel(modelName?: string): boolean {
+  if (!modelName) return false;
+  const m = modelName.toLowerCase();
+  return m.includes('claude') || m.startsWith('anthropic');
+}
+
 export const BEDROCK_MANTLE_MODELS = [
   // OpenAI Models on Bedrock Mantle
   { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (1M context, High Efficiency)', category: 'OpenAI GPT' },
@@ -83,6 +89,7 @@ export const BEDROCK_MANTLE_MODELS = [
   { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol (1M context, Flagship Frontier)', category: 'OpenAI GPT' },
   { id: 'gpt-5.5', label: 'GPT-5.5 (272K context)', category: 'OpenAI GPT' },
   // Anthropic Claude Models on Bedrock Mantle
+  { id: 'anthropic.claude-haiku-4-5', label: 'Claude Haiku 4.5 (anthropic.claude-haiku-4-5)', category: 'Anthropic Claude' },
   { id: 'claude-opus-5', label: 'Claude Opus 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
   { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
   { id: 'claude-fable-5', label: 'Claude Fable 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
@@ -599,14 +606,15 @@ Output STRICT JSON with this exact schema:
   // --- AMAZON BEDROCK (MANTLE) - GPT-5.6 & CLAUDE MODELS ---
   if (config.provider === 'bedrock') {
     try {
-      const isGptModel = !config.model?.toLowerCase().startsWith('claude');
+      const isClaude = isBedrockClaudeModel(config.model);
       const targetBase = resolveBedrockBaseUrl(config.endpoint);
       const projectHeader = config.project || getBedrockProject() || 'default';
 
       let text = '';
 
-      if (isGptModel) {
+      if (!isClaude) {
         // OpenAI Chat Completions endpoint on Bedrock Mantle
+        // OpenAI protocol uses Authorization: Bearer <key>
         const response = await fetch(`${targetBase}/v1/chat/completions`, {
           method: 'POST',
           headers: {
@@ -639,16 +647,16 @@ Output STRICT JSON with this exact schema:
         text = data.choices?.[0]?.message?.content || '';
       } else {
         // Anthropic Messages endpoint on Bedrock Mantle
+        // IMPORTANT: AWS Bedrock Mantle requires ONLY 'x-api-key'. Do NOT include 'Authorization'!
         const response = await fetch(`${targetBase}/anthropic/v1/messages`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': config.apiKey || '',
-            'Authorization': `Bearer ${config.apiKey || ''}`,
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
-            model: config.model || 'claude-opus-5',
+            model: config.model || 'anthropic.claude-haiku-4-5',
             max_tokens: 4096,
             system: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the requested schema with no markdown wrapping or surrounding commentary.',
             messages: [
@@ -683,7 +691,7 @@ Output STRICT JSON with this exact schema:
         ...parsed,
         engineUsed: {
           provider: 'bedrock',
-          model: config.model || (isGptModel ? 'gpt-5.6-luna' : 'claude-opus-5'),
+          model: config.model || (!isClaude ? 'gpt-5.6-luna' : 'anthropic.claude-haiku-4-5'),
           isLive: true
         }
       };
