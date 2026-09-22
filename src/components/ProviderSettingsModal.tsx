@@ -819,7 +819,8 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                 </p>
               </div>
 
-              {/* Project Scope Header */}
+              {/* Project Scope Header — only relevant for OpenAI GPT models */}
+              {!isBedrockClaudeModel(model) && (
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Project Scope (OpenAI-Project Header)</label>
                 <input
@@ -833,6 +834,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                   Dispatched as the <code className="bg-slate-100 px-1 py-0.5 rounded">OpenAI-Project</code> header for GPT models (defaults to <code className="bg-slate-100 px-1 py-0.5 rounded">default</code>).
                 </p>
               </div>
+              )}
 
               {/* Model Selection with optgroups */}
               <div>
