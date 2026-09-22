@@ -339,10 +339,10 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] border border-slate-200 flex flex-col animate-in fade-in zoom-in duration-150">
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0 rounded-t-2xl">
           <div className="flex items-center space-x-2">
             <div className="p-2 bg-primary-100 text-primary-700 rounded-lg">
               <Sparkles className="w-5 h-5" />
@@ -360,8 +360,8 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-6 space-y-6">
+        {/* Modal Body — scrollable */}
+        <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0">
           {/* Provider Selector Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {/* Built-in Offline */}
@@ -815,7 +815,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Stored securely in your local browser storage. Passed as <code className="bg-slate-100 px-1 py-0.5 rounded">Authorization: Bearer &lt;key&gt;</code> and <code className="bg-slate-100 px-1 py-0.5 rounded">x-api-key</code>.
+                  Stored securely in your local browser storage. Passed as <code className="bg-slate-100 px-1 py-0.5 rounded">x-api-key</code> for Claude models or <code className="bg-slate-100 px-1 py-0.5 rounded">Authorization: Bearer</code> for GPT models.
                 </p>
               </div>
 
@@ -901,7 +901,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50 shrink-0 rounded-b-2xl">
           <button
             type="button"
             onClick={handleTestConnection}
