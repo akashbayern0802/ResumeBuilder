@@ -25,7 +25,7 @@ export function getProviderModel(provider: LLMProviderType): string {
     case 'anthropic': return 'claude-3-5-sonnet-latest';
     case 'groq': return 'llama-3.3-70b-versatile';
     case 'ollama': return 'llama3.2';
-    case 'bedrock': return 'gpt-5.6-luna';
+    case 'bedrock': return 'openai.gpt-5.6-luna';
     default: return 'offline';
   }
 }
@@ -84,16 +84,17 @@ export function isBedrockClaudeModel(modelName?: string): boolean {
 
 export const BEDROCK_MANTLE_MODELS = [
   // OpenAI Models on Bedrock Mantle
-  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (1M context, High Efficiency)', category: 'OpenAI GPT' },
-  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra (1M context, Balanced Intelligence)', category: 'OpenAI GPT' },
-  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol (1M context, Flagship Frontier)', category: 'OpenAI GPT' },
-  { id: 'gpt-5.5', label: 'GPT-5.5 (272K context)', category: 'OpenAI GPT' },
+  { id: 'openai.gpt-5.6-luna', label: 'GPT-5.6 Luna (1M context, High Efficiency)', category: 'OpenAI GPT' },
+  { id: 'openai.gpt-5.6-terra', label: 'GPT-5.6 Terra (1M context, Balanced Intelligence)', category: 'OpenAI GPT' },
+  { id: 'openai.gpt-5.6-sol', label: 'GPT-5.6 Sol (1M context, Flagship Frontier)', category: 'OpenAI GPT' },
+  { id: 'openai.gpt-5.5', label: 'GPT-5.5 (272K context)', category: 'OpenAI GPT' },
   // Anthropic Claude Models on Bedrock Mantle
-  { id: 'anthropic.claude-haiku-4-5', label: 'Claude Haiku 4.5 (anthropic.claude-haiku-4-5)', category: 'Anthropic Claude' },
-  { id: 'claude-opus-5', label: 'Claude Opus 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
-  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
-  { id: 'claude-fable-5', label: 'Claude Fable 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
-  { id: 'claude-opus-4.8', label: 'Claude Opus 4.8 (1M context, 128K max output)', category: 'Anthropic Claude' }
+  { id: 'anthropic.claude-sonnet-5', label: 'Claude Sonnet 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'anthropic.claude-opus-5', label: 'Claude Opus 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'anthropic.claude-fable-5', label: 'Claude Fable 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'anthropic.claude-opus-4-8', label: 'Claude Opus 4.8 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'anthropic.claude-opus-4-7', label: 'Claude Opus 4.7 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'anthropic.claude-haiku-4-5', label: 'Claude Haiku 4.5 (Fast & Efficient)', category: 'Anthropic Claude' }
 ];
 
 export const DEFAULT_LLM_CONFIG: LLMConfig = {
@@ -623,7 +624,7 @@ Output STRICT JSON with this exact schema:
             'OpenAI-Project': projectHeader
           },
           body: JSON.stringify({
-            model: config.model || 'gpt-5.6-luna',
+            model: config.model || 'openai.gpt-5.6-luna',
             response_format: { type: 'json_object' },
             messages: [
               {
@@ -656,7 +657,7 @@ Output STRICT JSON with this exact schema:
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
-            model: config.model || 'anthropic.claude-haiku-4-5',
+            model: config.model || 'anthropic.claude-sonnet-5',
             max_tokens: 4096,
             system: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the requested schema with no markdown wrapping or surrounding commentary.',
             messages: [
@@ -691,7 +692,7 @@ Output STRICT JSON with this exact schema:
         ...parsed,
         engineUsed: {
           provider: 'bedrock',
-          model: config.model || (!isClaude ? 'gpt-5.6-luna' : 'anthropic.claude-haiku-4-5'),
+          model: config.model || (!isClaude ? 'openai.gpt-5.6-luna' : 'anthropic.claude-sonnet-5'),
           isLive: true
         }
       };

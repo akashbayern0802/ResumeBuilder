@@ -294,7 +294,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
               'OpenAI-Project': projectHeader
             },
             body: JSON.stringify({
-              model: model || 'gpt-5.6-luna',
+              model: model || 'openai.gpt-5.6-luna',
               max_completion_tokens: 5,
               messages: [{ role: 'user', content: 'Say OK' }]
             })
@@ -317,7 +317,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
               'anthropic-version': '2023-06-01'
             },
             body: JSON.stringify({
-              model: model || 'anthropic.claude-haiku-4-5',
+              model: model || 'anthropic.claude-sonnet-5',
               max_tokens: 5,
               messages: [{ role: 'user', content: 'Say OK' }]
             })
