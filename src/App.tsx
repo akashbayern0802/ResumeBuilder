@@ -34,19 +34,30 @@ export function App() {
     const savedProvider = (localStorage.getItem('RESUME_LLM_PROVIDER') as LLMProviderType) || DEFAULT_LLM_CONFIG.provider;
     const savedKey = getProviderApiKey(savedProvider);
     const savedModel = getProviderModel(savedProvider);
-    const savedEndpoint = localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint;
-    return { provider: savedProvider, apiKey: savedKey, model: savedModel, endpoint: savedEndpoint };
+    const savedEndpoint = savedProvider === 'bedrock'
+      ? (localStorage.getItem('RESUME_BEDROCK_ENDPOINT') || 'https://bedrock-mantle.us-east-1.api.aws')
+      : (localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint);
+    const savedProject = savedProvider === 'bedrock'
+      ? (localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default')
+      : undefined;
+    return { provider: savedProvider, apiKey: savedKey, model: savedModel, endpoint: savedEndpoint, project: savedProject };
   });
 
   const handleQuickSelectProvider = (newProvider: LLMProviderType) => {
     const key = getProviderApiKey(newProvider);
     const model = getProviderModel(newProvider);
-    const endpoint = localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint;
+    const endpoint = newProvider === 'bedrock'
+      ? (localStorage.getItem('RESUME_BEDROCK_ENDPOINT') || 'https://bedrock-mantle.us-east-1.api.aws')
+      : (localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint);
+    const project = newProvider === 'bedrock'
+      ? (localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default')
+      : undefined;
     const newConfig: LLMConfig = {
       provider: newProvider,
       apiKey: key,
       model,
-      endpoint
+      endpoint,
+      project
     };
     localStorage.setItem('RESUME_LLM_PROVIDER', newProvider);
     localStorage.setItem('RESUME_LLM_API_KEY', key);

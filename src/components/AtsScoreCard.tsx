@@ -74,7 +74,7 @@ export const AtsScoreCard: React.FC<Props> = ({
           {llmConfig && (
             (() => {
               const isMissingKey = Boolean(llmConfig.provider !== 'offline' && llmConfig.provider !== 'ollama' && !llmConfig.apiKey);
-              const providerName = llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Claude' : llmConfig.provider === 'gemini' ? 'Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Offline';
+              const providerName = llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Claude' : llmConfig.provider === 'gemini' ? 'Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : llmConfig.provider === 'bedrock' ? 'Bedrock' : 'Offline';
 
               if (isMissingKey) {
                 return (

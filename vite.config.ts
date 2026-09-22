@@ -7,6 +7,14 @@ export default defineConfig({
   server: {
     port: 3000,
     open: false,
+    proxy: {
+      '/api/bedrock-mantle': {
+        target: 'https://bedrock-mantle.us-east-1.api.aws',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/bedrock-mantle/, ''),
+        secure: false
+      }
+    }
   },
 });
 

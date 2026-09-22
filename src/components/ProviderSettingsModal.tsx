@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 import { LLMConfig, LLMProviderType } from '../types/resume';
-import { X, Sparkles, Cpu, Server, ShieldCheck, ExternalLink, Check, AlertCircle, Bot, Zap } from 'lucide-react';
-import { getProviderApiKey, setProviderApiKey, getProviderModel, setProviderModel } from '../services/llmService';
+import { X, Sparkles, Cpu, Server, ShieldCheck, ExternalLink, Check, AlertCircle, Bot, Zap, Cloud } from 'lucide-react';
+import {
+  getProviderApiKey,
+  setProviderApiKey,
+  getProviderModel,
+  setProviderModel,
+  BEDROCK_MANTLE_MODELS,
+  getBedrockProject,
+  setBedrockProject,
+  getBedrockEndpoint,
+  setBedrockEndpoint,
+  resolveBedrockBaseUrl
+} from '../services/llmService';
 
 interface Props {
   isOpen: boolean;
@@ -40,6 +51,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
   const [provider, setProvider] = useState<LLMProviderType>(config.provider);
   const [apiKey, setApiKey] = useState(() => config.apiKey || getProviderApiKey(config.provider));
   const [model, setModel] = useState(() => config.model || getProviderModel(config.provider));
+  const [bedrockProject, setBedrockProjectState] = useState(() => config.project || getBedrockProject() || 'default');
   const [isCustomModel, setIsCustomModel] = useState(() => {
     if (config.provider === 'gemini' && config.model) {
       return !GEMINI_MODELS.some(m => m.id === config.model);
@@ -50,9 +62,17 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
     if (config.provider === 'anthropic' && config.model) {
       return !ANTHROPIC_MODELS.some(m => m.id === config.model);
     }
+    if (config.provider === 'bedrock' && config.model) {
+      return !BEDROCK_MANTLE_MODELS.some(m => m.id === config.model);
+    }
     return false;
   });
-  const [endpoint, setEndpoint] = useState(config.endpoint || 'http://localhost:11434');
+  const [endpoint, setEndpoint] = useState(() => {
+    if (config.provider === 'bedrock') {
+      return config.endpoint || getBedrockEndpoint();
+    }
+    return config.endpoint || 'http://localhost:11434';
+  });
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
   const [testMessage, setTestMessage] = useState('');
 
@@ -62,6 +82,10 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
     if (provider !== 'offline') {
       setProviderApiKey(provider, apiKey.trim());
       setProviderModel(provider, model.trim());
+      if (provider === 'bedrock') {
+        setBedrockProject(bedrockProject);
+        setBedrockEndpoint(endpoint);
+      }
     }
     setProvider(newProvider);
     setTestStatus('idle');
@@ -85,6 +109,9 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
       setIsCustomModel(!OPENAI_MODELS.some(m => m.id === nextModel));
     } else if (newProvider === 'anthropic') {
       setIsCustomModel(!ANTHROPIC_MODELS.some(m => m.id === nextModel));
+    } else if (newProvider === 'bedrock') {
+      setIsCustomModel(!BEDROCK_MANTLE_MODELS.some(m => m.id === nextModel));
+      setEndpoint(getBedrockEndpoint());
     } else {
       setIsCustomModel(false);
     }
@@ -95,16 +122,23 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
       setProviderApiKey(provider, apiKey.trim());
       setProviderModel(provider, model.trim());
     }
+    if (provider === 'bedrock') {
+      setBedrockProject(bedrockProject);
+      setBedrockEndpoint(endpoint);
+    }
     const newConfig: LLMConfig = {
       provider,
       apiKey: apiKey.trim(),
       model: model.trim(),
-      endpoint: endpoint.trim()
+      endpoint: endpoint.trim(),
+      project: bedrockProject.trim()
     };
     localStorage.setItem('RESUME_LLM_PROVIDER', provider);
     localStorage.setItem('RESUME_LLM_API_KEY', apiKey.trim());
     localStorage.setItem('RESUME_LLM_MODEL', model.trim());
     localStorage.setItem('RESUME_OLLAMA_ENDPOINT', endpoint.trim());
+    localStorage.setItem('RESUME_BEDROCK_PROJECT', bedrockProject.trim());
+    localStorage.setItem('RESUME_BEDROCK_ENDPOINT', endpoint.trim());
     onSave(newConfig);
     onClose();
   };
@@ -238,6 +272,67 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
       } catch (err: any) {
         setTestStatus('failed');
         setTestMessage('Network error connecting to Anthropic API.');
+      }
+    } else if (provider === 'bedrock') {
+      if (!apiKey.trim()) {
+        setTestStatus('failed');
+        setTestMessage('Please enter your Amazon Bedrock API key.');
+        return;
+      }
+      try {
+        const isGptModel = !model.toLowerCase().startsWith('claude');
+        const targetBase = resolveBedrockBaseUrl(endpoint);
+        const projectHeader = bedrockProject.trim() || 'default';
+
+        if (isGptModel) {
+          const res = await fetch(`${targetBase}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey.trim()}`,
+              'OpenAI-Project': projectHeader
+            },
+            body: JSON.stringify({
+              model: model || 'gpt-5.6-luna',
+              max_completion_tokens: 5,
+              messages: [{ role: 'user', content: 'Say OK' }]
+            })
+          });
+          if (res.ok) {
+            setTestStatus('success');
+            setTestMessage(`Successfully connected to Bedrock Mantle OpenAI endpoint! Model: ${model}`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            setTestStatus('failed');
+            setTestMessage(err.error?.message || `Bedrock Mantle returned HTTP ${res.status}: ${res.statusText}`);
+          }
+        } else {
+          const res = await fetch(`${targetBase}/anthropic/v1/messages`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey.trim(),
+              'Authorization': `Bearer ${apiKey.trim()}`,
+              'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({
+              model: model || 'claude-opus-5',
+              max_tokens: 5,
+              messages: [{ role: 'user', content: 'Say OK' }]
+            })
+          });
+          if (res.ok) {
+            setTestStatus('success');
+            setTestMessage(`Successfully connected to Bedrock Mantle Anthropic endpoint! Model: ${model}`);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            setTestStatus('failed');
+            setTestMessage(err.error?.message || `Bedrock Mantle returned HTTP ${res.status}: ${res.statusText}`);
+          }
+        }
+      } catch (err: any) {
+        setTestStatus('failed');
+        setTestMessage(`Connection failed: ${err.message || 'Network error'}. Ensure local Vite server is running for CORS proxy.`);
       }
     }
   };
@@ -385,6 +480,26 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
               <p className="text-[11px] text-slate-500 mb-2 line-clamp-2">DeepSeek / Llama • Runs locally on PC</p>
               <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded bg-purple-100 text-purple-800 w-fit">
                 100% Local Free
+              </span>
+            </button>
+
+            {/* Amazon Bedrock Mantle */}
+            <button
+              type="button"
+              onClick={() => handleSelectProvider('bedrock')}
+              className={`flex flex-col text-left p-3 rounded-xl border-2 transition-all ${
+                provider === 'bedrock'
+                  ? 'border-primary-600 bg-primary-50/40 shadow-sm'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="flex items-center justify-between w-full mb-1">
+                <span className="font-semibold text-xs text-slate-900">Bedrock (Mantle)</span>
+                <Cloud className="w-4 h-4 text-orange-600 shrink-0" />
+              </div>
+              <p className="text-[11px] text-slate-500 mb-2 line-clamp-2">GPT-5.6 • Claude Opus 5 • Dual Protocol</p>
+              <span className="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded bg-orange-100 text-orange-800 w-fit">
+                AWS Bedrock
               </span>
             </button>
           </div>
@@ -662,6 +777,106 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                   placeholder="llama3.2 or deepseek-r1:latest"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
                 />
+              </div>
+            </div>
+          )}
+
+          {provider === 'bedrock' && (
+            <div className="space-y-4">
+              {/* Endpoint Base URL */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">Bedrock Mantle Endpoint Base URL</label>
+                  <span className="text-[10px] text-orange-700 font-mono font-semibold bg-orange-50 px-1.5 py-0.5 rounded border border-orange-200">AWS us-east-1</span>
+                </div>
+                <input
+                  type="text"
+                  value={endpoint}
+                  onChange={(e) => setEndpoint(e.target.value)}
+                  placeholder="https://bedrock-mantle.us-east-1.api.aws"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  When running locally, requests route via Vite proxy (<code className="bg-slate-100 px-1 py-0.5 rounded">/api/bedrock-mantle</code>) to prevent browser CORS restrictions.
+                </p>
+              </div>
+
+              {/* API Key */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">Amazon Bedrock API Key / Bearer Token</label>
+                </div>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="bedrock-api-..."
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Stored securely in your local browser storage. Passed as <code className="bg-slate-100 px-1 py-0.5 rounded">Authorization: Bearer &lt;key&gt;</code> and <code className="bg-slate-100 px-1 py-0.5 rounded">x-api-key</code>.
+                </p>
+              </div>
+
+              {/* Project Scope Header */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Project Scope (OpenAI-Project Header)</label>
+                <input
+                  type="text"
+                  value={bedrockProject}
+                  onChange={(e) => setBedrockProjectState(e.target.value)}
+                  placeholder="default"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Dispatched as the <code className="bg-slate-100 px-1 py-0.5 rounded">OpenAI-Project</code> header for GPT models (defaults to <code className="bg-slate-100 px-1 py-0.5 rounded">default</code>).
+                </p>
+              </div>
+
+              {/* Model Selection with optgroups */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Model Selection</label>
+                <select
+                  value={BEDROCK_MANTLE_MODELS.some(m => m.id === model) ? model : 'custom'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'custom') {
+                      setIsCustomModel(true);
+                      if (BEDROCK_MANTLE_MODELS.some(m => m.id === model)) {
+                        setModel('');
+                      }
+                    } else {
+                      setIsCustomModel(false);
+                      setModel(val);
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white font-medium"
+                >
+                  <optgroup label="OpenAI GPT Models (via /v1/chat/completions)">
+                    {BEDROCK_MANTLE_MODELS.filter(m => m.category === 'OpenAI GPT').map((m) => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Anthropic Claude Models (via /anthropic/v1/messages)">
+                    {BEDROCK_MANTLE_MODELS.filter(m => m.category === 'Anthropic Claude').map((m) => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
+                  <option value="custom">Custom Model ID...</option>
+                </select>
+
+                {(isCustomModel || !BEDROCK_MANTLE_MODELS.some(m => m.id === model)) && (
+                  <div className="mt-2.5">
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">Custom Model Name / ID</label>
+                    <input
+                      type="text"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="e.g. gpt-5.6-luna or claude-opus-5"
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}

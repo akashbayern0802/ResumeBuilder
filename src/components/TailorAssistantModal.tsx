@@ -71,7 +71,7 @@ export const TailorAssistantModal: React.FC<Props> = ({
                 <span>Review tailored bullet points, targeted summary, and incorporated keywords</span>
                 {llmConfig && (
                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                    Engine: {llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Anthropic Claude' : llmConfig.provider === 'gemini' ? 'Google Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Built-in Offline'}
+                    Engine: {llmConfig.provider === 'openai' ? 'OpenAI GPT' : llmConfig.provider === 'anthropic' ? 'Anthropic Claude' : llmConfig.provider === 'bedrock' ? 'Amazon Bedrock' : llmConfig.provider === 'gemini' ? 'Google Gemini' : llmConfig.provider === 'groq' ? 'Groq' : llmConfig.provider === 'ollama' ? 'Ollama' : 'Built-in Offline'}
                   </span>
                 )}
               </div>
@@ -103,7 +103,7 @@ export const TailorAssistantModal: React.FC<Props> = ({
             <div className="py-16 flex flex-col items-center justify-center text-center space-y-3">
               <div className="w-10 h-10 border-3 border-primary-600 border-t-transparent rounded-full animate-spin" />
               <div className="font-semibold text-sm text-slate-800">
-                Tailoring Experience with {llmConfig?.provider === 'anthropic' ? `Claude (${llmConfig.model})` : llmConfig?.provider === 'openai' ? `OpenAI (${llmConfig.model})` : llmConfig?.provider === 'gemini' ? `Gemini (${llmConfig.model})` : llmConfig?.provider === 'groq' ? `Groq (${llmConfig.model})` : llmConfig?.provider === 'ollama' ? `Local Ollama (${llmConfig.model})` : 'Offline Heuristic Engine'}...
+                Tailoring Experience with {llmConfig?.provider === 'anthropic' ? `Claude (${llmConfig.model})` : llmConfig?.provider === 'openai' ? `OpenAI (${llmConfig.model})` : llmConfig?.provider === 'bedrock' ? `Bedrock (${llmConfig.model})` : llmConfig?.provider === 'gemini' ? `Gemini (${llmConfig.model})` : llmConfig?.provider === 'groq' ? `Groq (${llmConfig.model})` : llmConfig?.provider === 'ollama' ? `Local Ollama (${llmConfig.model})` : 'Offline Heuristic Engine'}...
               </div>
               <p className="text-xs text-slate-500 max-w-sm">
                 Aligning keywords, crafting action-oriented XYZ bullet points, and maximizing ATS match score.
@@ -121,7 +121,7 @@ export const TailorAssistantModal: React.FC<Props> = ({
                     </span>
                     <div>
                       <span className="font-bold text-emerald-900">
-                        Live Cloud API Executed: {tailoringResult.engineUsed.provider === 'openai' ? 'OpenAI GPT' : tailoringResult.engineUsed.provider === 'anthropic' ? 'Anthropic Claude' : tailoringResult.engineUsed.provider.toUpperCase()}
+                        Live Cloud API Executed: {tailoringResult.engineUsed.provider === 'openai' ? 'OpenAI GPT' : tailoringResult.engineUsed.provider === 'anthropic' ? 'Anthropic Claude' : tailoringResult.engineUsed.provider === 'bedrock' ? 'Amazon Bedrock' : tailoringResult.engineUsed.provider.toUpperCase()}
                       </span>
                       <span className="text-emerald-700 ml-1.5 font-mono text-[11px]">
                         [{tailoringResult.engineUsed.model}]
@@ -137,6 +137,7 @@ export const TailorAssistantModal: React.FC<Props> = ({
                 const isFallback = Boolean(requestedProvider && requestedProvider !== 'offline');
                 const providerLabel = requestedProvider === 'anthropic' ? 'Anthropic Claude'
                   : requestedProvider === 'openai' ? 'OpenAI GPT'
+                  : requestedProvider === 'bedrock' ? 'Amazon Bedrock (Mantle)'
                   : requestedProvider === 'gemini' ? 'Google Gemini'
                   : requestedProvider === 'groq' ? 'Groq Cloud'
                   : requestedProvider === 'ollama' ? 'Local Ollama'

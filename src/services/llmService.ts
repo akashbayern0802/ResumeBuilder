@@ -25,6 +25,7 @@ export function getProviderModel(provider: LLMProviderType): string {
     case 'anthropic': return 'claude-3-5-sonnet-latest';
     case 'groq': return 'llama-3.3-70b-versatile';
     case 'ollama': return 'llama3.2';
+    case 'bedrock': return 'gpt-5.6-luna';
     default: return 'offline';
   }
 }
@@ -41,16 +42,59 @@ export function getProviderDisplayName(provider: LLMProviderType): string {
     case 'gemini': return 'Google Gemini';
     case 'groq': return 'Groq Cloud';
     case 'ollama': return 'Local Ollama';
+    case 'bedrock': return 'Amazon Bedrock (Mantle)';
     case 'offline': return 'Built-in Offline';
     default: return provider;
   }
 }
 
+export function getBedrockProject(): string {
+  return localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default';
+}
+
+export function setBedrockProject(project: string): void {
+  localStorage.setItem('RESUME_BEDROCK_PROJECT', (project || 'default').trim());
+}
+
+export function getBedrockEndpoint(): string {
+  return localStorage.getItem('RESUME_BEDROCK_ENDPOINT') || 'https://bedrock-mantle.us-east-1.api.aws';
+}
+
+export function setBedrockEndpoint(endpoint: string): void {
+  localStorage.setItem('RESUME_BEDROCK_ENDPOINT', endpoint.trim());
+}
+
+export function resolveBedrockBaseUrl(rawUrl?: string): string {
+  const custom = (rawUrl || getBedrockEndpoint() || 'https://bedrock-mantle.us-east-1.api.aws').trim().replace(/\/+$/, '');
+  const isLocalHost = typeof window !== 'undefined' && (
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  );
+  if (isLocalHost && custom.includes('bedrock-mantle.us-east-1.api.aws')) {
+    return '/api/bedrock-mantle';
+  }
+  return custom;
+}
+
+export const BEDROCK_MANTLE_MODELS = [
+  // OpenAI Models on Bedrock Mantle
+  { id: 'gpt-5.6-luna', label: 'GPT-5.6 Luna (1M context, High Efficiency)', category: 'OpenAI GPT' },
+  { id: 'gpt-5.6-terra', label: 'GPT-5.6 Terra (1M context, Balanced Intelligence)', category: 'OpenAI GPT' },
+  { id: 'gpt-5.6-sol', label: 'GPT-5.6 Sol (1M context, Flagship Frontier)', category: 'OpenAI GPT' },
+  { id: 'gpt-5.5', label: 'GPT-5.5 (272K context)', category: 'OpenAI GPT' },
+  // Anthropic Claude Models on Bedrock Mantle
+  { id: 'claude-opus-5', label: 'Claude Opus 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'claude-fable-5', label: 'Claude Fable 5 (1M context, 128K max output)', category: 'Anthropic Claude' },
+  { id: 'claude-opus-4.8', label: 'Claude Opus 4.8 (1M context, 128K max output)', category: 'Anthropic Claude' }
+];
+
 export const DEFAULT_LLM_CONFIG: LLMConfig = {
   provider: (localStorage.getItem('RESUME_LLM_PROVIDER') as LLMProviderType) || 'offline',
   model: localStorage.getItem('RESUME_LLM_MODEL') || 'gemini-2.5-flash',
   apiKey: localStorage.getItem('RESUME_LLM_API_KEY') || '',
-  endpoint: localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || 'http://localhost:11434'
+  endpoint: localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || 'http://localhost:11434',
+  project: localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default'
 };
 
 /**
@@ -547,6 +591,113 @@ Output STRICT JSON with this exact schema:
           isLive: false,
           fallbackReason: formatFallbackReason('Anthropic Claude', err),
           requestedProvider: 'anthropic'
+        }
+      };
+    }
+  }
+
+  // --- AMAZON BEDROCK (MANTLE) - GPT-5.6 & CLAUDE MODELS ---
+  if (config.provider === 'bedrock') {
+    try {
+      const isGptModel = !config.model?.toLowerCase().startsWith('claude');
+      const targetBase = resolveBedrockBaseUrl(config.endpoint);
+      const projectHeader = config.project || getBedrockProject() || 'default';
+
+      let text = '';
+
+      if (isGptModel) {
+        // OpenAI Chat Completions endpoint on Bedrock Mantle
+        const response = await fetch(`${targetBase}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.apiKey || ''}`,
+            'OpenAI-Project': projectHeader
+          },
+          body: JSON.stringify({
+            model: config.model || 'gpt-5.6-luna',
+            response_format: { type: 'json_object' },
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the schema.'
+              },
+              {
+                role: 'user',
+                content: indianContextPrompt
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `Bedrock Mantle OpenAI error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        text = data.choices?.[0]?.message?.content || '';
+      } else {
+        // Anthropic Messages endpoint on Bedrock Mantle
+        const response = await fetch(`${targetBase}/anthropic/v1/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': config.apiKey || '',
+            'Authorization': `Bearer ${config.apiKey || ''}`,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: config.model || 'claude-opus-5',
+            max_tokens: 4096,
+            system: 'You are an executive resume consultant specializing in Indian tech, consulting, and banking markets. Output strictly valid JSON matching the requested schema with no markdown wrapping or surrounding commentary.',
+            messages: [
+              {
+                role: 'user',
+                content: indianContextPrompt
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `Bedrock Mantle Anthropic error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        text = data.content?.[0]?.text?.trim() || '';
+      }
+
+      if (text.startsWith('```')) {
+        text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      } else {
+        const startIdx = text.indexOf('{');
+        const endIdx = text.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          text = text.substring(startIdx, endIdx + 1);
+        }
+      }
+      const parsed = JSON.parse(text);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'bedrock',
+          model: config.model || (isGptModel ? 'gpt-5.6-luna' : 'claude-opus-5'),
+          isLive: true
+        }
+      };
+    } catch (err: any) {
+      console.warn('Amazon Bedrock (Mantle) call failed, falling back to offline engine:', err);
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: formatFallbackReason('Amazon Bedrock (Mantle)', err),
+          requestedProvider: 'bedrock'
         }
       };
     }

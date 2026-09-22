@@ -112,13 +112,14 @@ export interface TailoringResult {
   };
 }
 
-export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama' | 'openai' | 'anthropic';
+export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama' | 'openai' | 'anthropic' | 'bedrock';
 
 export interface LLMConfig {
   provider: LLMProviderType;
   apiKey?: string;
   model: string;
-  endpoint?: string; // For Ollama, defaults to http://localhost:11434
+  endpoint?: string; // For Ollama / Bedrock Mantle custom base URL
+  project?: string; // For Bedrock Mantle OpenAI-Project header (defaults to "default")
 }
 
 export type ResumeTemplate = 'naukri' | 'harvard' | 'modern' | 'executive' | 'wallstreet' | 'tech' | 'minimalist';
