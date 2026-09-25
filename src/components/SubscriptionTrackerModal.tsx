@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, CreditCard, Calendar, Store, DollarSign } from 'lucide-react';
+import { X, Plus, CreditCard, Calendar, Store, DollarSign, Mail } from 'lucide-react';
 
 interface Subscription {
   id: string;
@@ -7,6 +7,7 @@ interface Subscription {
   amount: string;
   paymentSource: string;
   frequency: string;
+  email?: string;
 }
 
 interface Props {
@@ -20,6 +21,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
   const [amount, setAmount] = useState('');
   const [paymentSource, setPaymentSource] = useState('');
   const [frequency, setFrequency] = useState('Monthly');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('MY_SUBSCRIPTIONS');
@@ -44,7 +46,8 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
       merchant,
       amount,
       paymentSource,
-      frequency
+      frequency,
+      email
     };
     saveSubscriptions([...subscriptions, newSub]);
     
@@ -53,6 +56,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
     setAmount('');
     setPaymentSource('');
     setFrequency('Monthly');
+    setEmail('');
   };
 
   const handleDelete = (id: string) => {
@@ -90,7 +94,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
           {/* Add Form */}
           <form onSubmit={handleAdd} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">Add New Subscription</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
                   <Store className="w-3.5 h-3.5" /> Merchant
@@ -125,7 +129,19 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
                   type="text"
                   value={paymentSource}
                   onChange={e => setPaymentSource(e.target.value)}
-                  placeholder="e.g. Chase Visa, PayPal"
+                  placeholder="e.g. Chase Visa"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5" /> Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="user@example.com"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -173,6 +189,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
                       <th className="px-5 py-3">Merchant</th>
                       <th className="px-5 py-3">Amount</th>
                       <th className="px-5 py-3">Payment Source</th>
+                      <th className="px-5 py-3">Email Address</th>
                       <th className="px-5 py-3">Frequency</th>
                       <th className="px-5 py-3 text-right">Actions</th>
                     </tr>
@@ -183,6 +200,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
                         <td className="px-5 py-3.5 text-sm font-medium text-slate-900">{sub.merchant}</td>
                         <td className="px-5 py-3.5 text-sm text-slate-600">{sub.amount}</td>
                         <td className="px-5 py-3.5 text-sm text-slate-600">{sub.paymentSource || '-'}</td>
+                        <td className="px-5 py-3.5 text-sm text-slate-600">{sub.email || '-'}</td>
                         <td className="px-5 py-3.5 text-sm text-slate-600">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                             {sub.frequency}
