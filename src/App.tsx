@@ -13,6 +13,7 @@ import { ProviderSettingsModal } from './components/ProviderSettingsModal';
 import { TailorAssistantModal } from './components/TailorAssistantModal';
 import { JobDescriptionModal } from './components/JobDescriptionModal';
 import { ResumeUploadModal } from './components/ResumeUploadModal';
+import { SubscriptionTrackerModal } from './components/SubscriptionTrackerModal';
 import { Eye, Edit3, Briefcase, Sparkles, UploadCloud, AlertTriangle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -68,6 +69,7 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
   const [isResumeModalOpen, setIsResumeModalOpen] = useState(false);
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isTailorModalOpen, setIsTailorModalOpen] = useState(false);
   const [isTailoring, setIsTailoring] = useState(false);
   const [tailoringResult, setTailoringResult] = useState<TailoringResult | null>(null);
@@ -214,6 +216,7 @@ export function App() {
         onLoadJobDescription={handleLoadJobDescription}
         onOpenJdModal={() => setIsJdModalOpen(true)}
         onOpenResumeModal={() => setIsResumeModalOpen(true)}
+        onOpenSubscriptions={() => setIsSubscriptionModalOpen(true)}
         onPrint={handleDownloadPdf}
         isDownloadingPdf={isDownloadingPdf}
       />
@@ -374,6 +377,11 @@ export function App() {
         onAddSkill={handleAddSkill}
         llmConfig={llmConfig}
         onOpenSettings={() => setIsSettingsOpen(true)}
+      />
+
+      <SubscriptionTrackerModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setIsSubscriptionModalOpen(false)}
       />
     </div>
   );

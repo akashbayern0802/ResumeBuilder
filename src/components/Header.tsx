@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   ChevronDown,
   Check,
-  Cloud
+  Cloud,
+  CreditCard
 } from 'lucide-react';
 
 interface Props {
@@ -33,6 +34,7 @@ interface Props {
   onLoadJobDescription: (title: string, company: string, text: string) => void;
   onOpenJdModal: () => void;
   onOpenResumeModal: () => void;
+  onOpenSubscriptions: () => void;
   onPrint: () => void;
   isDownloadingPdf?: boolean;
 }
@@ -48,6 +50,7 @@ export const Header: React.FC<Props> = ({
   onLoadJobDescription,
   onOpenJdModal,
   onOpenResumeModal,
+  onOpenSubscriptions,
   onPrint,
   isDownloadingPdf
 }) => {
@@ -536,6 +539,17 @@ export const Header: React.FC<Props> = ({
             >
               <Briefcase className="w-3.5 h-3.5" />
               <span>Upload / Paste JD</span>
+            </button>
+
+            {/* Subscription Tracker */}
+            <button
+              type="button"
+              onClick={onOpenSubscriptions}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-fuchsia-700 hover:text-fuchsia-800 bg-fuchsia-50 hover:bg-fuchsia-100 border border-fuchsia-200/80 rounded-lg transition-all shadow-2xs cursor-pointer"
+              title="Manage monthly subscriptions"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Subscriptions</span>
             </button>
 
             {/* Export Dropdown / Buttons */}
