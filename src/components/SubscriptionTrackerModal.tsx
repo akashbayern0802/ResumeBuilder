@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, CreditCard, Calendar, Store, DollarSign, Mail } from 'lucide-react';
+import { X, Plus, CreditCard, Calendar, Store, DollarSign, Mail, Download, Upload } from 'lucide-react';
 
 interface Subscription {
   id: string;
@@ -59,8 +59,78 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
     setEmail('');
   };
 
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const handleDelete = (id: string) => {
     saveSubscriptions(subscriptions.filter(s => s.id !== id));
+  };
+
+  const handleExportJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(subscriptions, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "subscriptions_backup.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleExportCsv = () => {
+    const headers = ['merchant', 'amount', 'paymentSource', 'email', 'frequency'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    for (const sub of subscriptions) {
+      const values = headers.map(header => {
+        const val = (sub as any)[header] || '';
+        return `"${val.replace(/"/g, '""')}"`;
+      });
+      csvRows.push(values.join(','));
+    }
+    const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvRows.join('\n'));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "subscriptions_backup.csv");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (file.name.endsWith('.json')) {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            saveSubscriptions(parsed);
+          }
+        } else if (file.name.endsWith('.csv')) {
+          const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+          if (lines.length > 1) {
+            const headers = lines[0].split(',').map(h => h.replace(/"/g, ''));
+            const importedSubs: Subscription[] = lines.slice(1).map((line, index) => {
+              const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+              const sub: any = { id: Date.now().toString() + index };
+              headers.forEach((h, i) => {
+                let val = values[i] || '';
+                if (val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length - 1).replace(/""/g, '"');
+                sub[h] = val;
+              });
+              return sub as Subscription;
+            });
+            saveSubscriptions(importedSubs);
+          }
+        }
+      } catch (err) {
+        alert("Failed to import file. Ensure it's a valid JSON or CSV.");
+      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+    reader.readAsText(file);
   };
 
   if (!isOpen) return null;
@@ -175,6 +245,33 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
               <h3 className="text-sm font-semibold text-slate-800">Your Subscriptions ({subscriptions.length})</h3>
+              <div className="flex items-center gap-2">
+                <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json,.csv" className="hidden" />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 rounded transition-colors shadow-2xs"
+                  title="Import from JSON or CSV"
+                >
+                  <Upload className="w-3.5 h-3.5" /> Import
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 rounded transition-colors shadow-2xs"
+                  title="Export to JSON"
+                >
+                  <Download className="w-3.5 h-3.5" /> JSON
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 rounded transition-colors shadow-2xs"
+                  title="Export to CSV"
+                >
+                  <Download className="w-3.5 h-3.5" /> CSV
+                </button>
+              </div>
             </div>
             
             {subscriptions.length === 0 ? (
