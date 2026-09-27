@@ -22,6 +22,7 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
   const [paymentSource, setPaymentSource] = useState('');
   const [frequency, setFrequency] = useState('Monthly');
   const [email, setEmail] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('MY_SUBSCRIPTIONS');
@@ -41,17 +42,48 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
     e.preventDefault();
     if (!merchant.trim() || !amount.trim()) return;
 
-    const newSub: Subscription = {
-      id: Date.now().toString(),
-      merchant,
-      amount,
-      paymentSource,
-      frequency,
-      email
-    };
-    saveSubscriptions([...subscriptions, newSub]);
+    if (editingId) {
+      // Update existing subscription
+      const updatedSubs = subscriptions.map(sub => {
+        if (sub.id === editingId) {
+          return { ...sub, merchant, amount, paymentSource, frequency, email };
+        }
+        return sub;
+      });
+      saveSubscriptions(updatedSubs);
+      setEditingId(null);
+    } else {
+      // Add new subscription
+      const newSub: Subscription = {
+        id: Date.now().toString(),
+        merchant,
+        amount,
+        paymentSource,
+        frequency,
+        email
+      };
+      saveSubscriptions([...subscriptions, newSub]);
+    }
     
     // Reset fields
+    setMerchant('');
+    setAmount('');
+    setPaymentSource('');
+    setFrequency('Monthly');
+    setEmail('');
+  };
+
+  const handleEdit = (sub: Subscription) => {
+    setEditingId(sub.id);
+    setMerchant(sub.merchant);
+    setAmount(sub.amount);
+    setPaymentSource(sub.paymentSource);
+    setFrequency(sub.frequency);
+    setEmail(sub.email || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
     setMerchant('');
     setAmount('');
     setPaymentSource('');
@@ -161,9 +193,11 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
         {/* Body */}
         <div className="p-6 space-y-8 overflow-y-auto flex-1 min-h-0 bg-slate-50/30">
           
-          {/* Add Form */}
+          {/* Add/Edit Form */}
           <form onSubmit={handleAdd} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">Add New Subscription</h3>
+            <h3 className="text-sm font-semibold text-slate-800 border-b border-slate-100 pb-2">
+              {editingId ? 'Edit Subscription' : 'Add New Subscription'}
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
@@ -231,12 +265,21 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
                 </select>
               </div>
             </div>
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-2 gap-2">
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 type="submit"
                 className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm"
               >
-                <Plus className="w-4 h-4" /> Add Subscription
+                {editingId ? 'Update Subscription' : <><Plus className="w-4 h-4" /> Add Subscription</>}
               </button>
             </div>
           </form>
@@ -303,7 +346,13 @@ export const SubscriptionTrackerModal: React.FC<Props> = ({ isOpen, onClose }) =
                             {sub.frequency}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 text-right">
+                        <td className="px-5 py-3.5 text-right space-x-2">
+                          <button
+                            onClick={() => handleEdit(sub)}
+                            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium p-1 hover:bg-indigo-50 rounded transition-colors"
+                          >
+                            Edit
+                          </button>
                           <button
                             onClick={() => handleDelete(sub.id)}
                             className="text-xs text-red-500 hover:text-red-700 font-medium p-1 hover:bg-red-50 rounded transition-colors"
