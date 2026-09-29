@@ -158,7 +158,7 @@ export async function exportElementToPdf(elementId: string, filename: string): P
       }
 
       // Fine-tune target cut to land on a row of pure white pixels (between lines/paragraphs)
-      targetCutY = findNearestWhitespaceRow(ctx, canvas.width, targetCutY, currentStartY, 60);
+      targetCutY = findNearestWhitespaceRow(ctx, canvas.width, targetCutY, currentStartY, 160);
 
       pageSlices.push({ startY: currentStartY, endY: targetCutY });
       currentStartY = targetCutY;

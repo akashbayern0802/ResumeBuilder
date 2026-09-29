@@ -87,15 +87,15 @@ export const ResumePreview: React.FC<Props> = ({
           >
             {/* Header: Authority & Immediate Recruiter Metadata */}
             <header className="border-b-2 border-slate-900 pb-3.5 mb-4 text-center">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight uppercase mb-1">
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight uppercase mb-1">
                 {resume.fullName || 'Candidate Name'}
               </h1>
-              <p className="text-xs sm:text-sm font-bold text-slate-800 tracking-wide uppercase mb-2">
+              <p className="text-sm sm:text-base font-bold text-slate-800 tracking-wide uppercase mb-2">
                 {resume.title || 'Product / Project Manager | Strategy & Consulting'}
               </p>
 
               {/* Contact info */}
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-700 font-medium mb-2">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-slate-700 font-medium mb-2">
                 {resume.email && <span>{resume.email}</span>}
                 {resume.phone && <span>• {resume.phone}</span>}
                 {resume.location && <span>• {resume.location}</span>}
@@ -130,11 +130,11 @@ export const ResumePreview: React.FC<Props> = ({
             {resume.summary && (
               <section className="mb-4">
                 <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-950 leading-normal">
                     Executive Profile Summary
                   </h2>
                 </div>
-                <p className="text-xs text-slate-800 leading-relaxed text-justify">
+                <p className="text-sm text-slate-800 leading-relaxed text-justify">
                   {resume.summary}
                 </p>
               </section>
@@ -144,11 +144,11 @@ export const ResumePreview: React.FC<Props> = ({
             {resume.skills && resume.skills.length > 0 && (
               <section className="mb-4">
                 <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-950 leading-normal">
                     Key Competencies & Technical Capabilities
                   </h2>
                 </div>
-                <div className="space-y-1.5 text-xs">
+                <div className="space-y-1.5 text-sm">
                   {resume.skills.map((cat) => (
                     <div key={cat.id} className="leading-relaxed">
                       <span className="font-bold text-slate-950">{cat.categoryName}: </span>
@@ -163,27 +163,27 @@ export const ResumePreview: React.FC<Props> = ({
             {resume.experience && resume.experience.length > 0 && (
               <section className="mb-4">
                 <div className="border-b-2 border-slate-900 pb-1 mb-2.5">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-950 leading-normal">
                     Professional Experience
                   </h2>
                 </div>
                 <div className="space-y-4">
                   {resume.experience.map((exp) => (
                     <div key={exp.id}>
-                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
                         <div>
-                          <span className="font-bold text-xs text-slate-950">{exp.role}</span>
-                          <span className="text-xs font-semibold text-slate-800"> | {exp.company}</span>
+                          <span className="font-bold text-sm text-slate-950">{exp.role}</span>
+                          <span className="text-sm font-semibold text-slate-800"> | {exp.company}</span>
                         </div>
-                        <div className="text-xs text-slate-600 font-semibold italic shrink-0">
+                        <div className="text-sm text-slate-600 font-semibold italic shrink-0">
                           {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
                           {exp.location ? ` (${exp.location})` : ''}
                         </div>
                       </div>
 
-                      <ul className="list-disc list-outside ml-4 mt-1.5 space-y-1 text-xs text-slate-800 leading-normal">
+                      <ul className="list-disc list-outside ml-4 mt-1.5 space-y-1 text-sm text-slate-800 leading-normal">
                         {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5">{b}</li>
+                          <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                         ))}
                       </ul>
                     </div>
@@ -196,13 +196,13 @@ export const ResumePreview: React.FC<Props> = ({
             {resume.education && resume.education.length > 0 && (
               <section className="mb-4">
                 <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-950 leading-normal">
                     Education & Academic Credentials
                   </h2>
                 </div>
                 <div className="space-y-1.5">
                   {resume.education.map((edu) => (
-                    <div key={edu.id} className="flex items-baseline justify-between text-xs">
+                    <div key={edu.id} className="flex items-baseline justify-between text-sm break-inside-avoid">
                       <div>
                         <span className="font-bold text-slate-950">{edu.degree}</span>
                         <span className="text-slate-800"> — {edu.institution}</span>
@@ -219,18 +219,18 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Professional Certifications */}
             {resume.certifications && resume.certifications.length > 0 && (
-              <section className="mb-3">
+              <section className="mb-3 break-inside-avoid">
                 <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-950 leading-normal">
                     Professional Certifications & Credentials
                   </h2>
                 </div>
-                <div className="flex flex-wrap gap-1.5 text-xs">
+                <div className="flex flex-wrap gap-1.5 text-sm">
                   {resume.certifications.map((cert, i) => (
                     <span
                       key={i}
                       style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 8px', borderRadius: '4px' }}
-                      className="bg-slate-100 text-slate-800 border border-slate-200 font-medium text-xs"
+                      className="bg-slate-100 text-slate-800 border border-slate-200 font-medium text-sm break-inside-avoid"
                     >
                       {cert}
                     </span>
