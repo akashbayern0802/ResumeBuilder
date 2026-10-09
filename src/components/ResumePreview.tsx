@@ -1,12 +1,25 @@
 import React from 'react';
-import { ResumeData, ResumeTemplate } from '../types/resume';
-import { Award, Briefcase, GraduationCap, Wrench, FileText, Download } from 'lucide-react';
+import { ResumeData, ResumeTemplate, ResumeSectionId } from '../types/resume';
+import {
+  Award,
+  Briefcase,
+  GraduationCap,
+  Wrench,
+  FileText,
+  Download,
+  FileCheck,
+  Palette,
+  ArrowUpDown
+} from 'lucide-react';
 
 interface Props {
   resume: ResumeData;
   template: ResumeTemplate;
   onTemplateChange?: (template: ResumeTemplate) => void;
   onDownloadPdf?: () => void;
+  onOpenPdfPreview?: () => void;
+  onOpenRearrange?: () => void;
+  onOpenDesign?: () => void;
   isDownloadingPdf?: boolean;
 }
 
@@ -15,8 +28,12 @@ export const ResumePreview: React.FC<Props> = ({
   template,
   onTemplateChange,
   onDownloadPdf,
+  onOpenPdfPreview,
+  onOpenRearrange,
+  onOpenDesign,
   isDownloadingPdf
 }) => {
+
   const templatesList: { id: ResumeTemplate; label: string; icon: string }[] = [
     { id: 'naukri', label: 'Naukri & Indian ATS', icon: '🇮🇳' },
     { id: 'executive', label: 'Executive 2-Col', icon: '👔' },
@@ -27,52 +44,111 @@ export const ResumePreview: React.FC<Props> = ({
     { id: 'minimalist', label: 'Minimalist', icon: '📄' }
   ];
 
+  // Design tokens derived from resume.design
+  const design = resume.design;
+  const getFontFamily = () => {
+    switch (design?.fontFamily) {
+      case 'roboto': return "'Roboto', sans-serif";
+      case 'merriweather': return "'Merriweather', serif";
+      case 'garamond': return "'Garamond', Georgia, serif";
+      case 'sans': return "system-ui, -apple-system, sans-serif";
+      default: return "'Inter', sans-serif";
+    }
+  };
+
+  const getFontSizeClass = () => {
+    switch (design?.fontSize) {
+      case 'compact': return 'text-[12px] leading-normal';
+      case 'relaxed': return 'text-[14px] leading-relaxed';
+      default: return 'text-[13px] leading-normal';
+    }
+  };
+
+  const primaryColor = design?.primaryColor || '#0f172a';
+  const showPhoto = Boolean(design?.showPhoto && resume.photoUrl);
+
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Quick Template Switcher & Download Bar above the resume */}
-      {(onTemplateChange || onDownloadPdf) && (
-        <div className="no-print bg-white border border-slate-200 shadow-2xs rounded-xl p-1.5 flex flex-wrap items-center justify-center gap-1.5 text-xs w-full max-w-[850px]">
-          {onTemplateChange && (
-            <>
-              <span className="text-slate-400 font-semibold px-2 text-[11px] uppercase tracking-wider">Format:</span>
-              {templatesList.map(t => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => onTemplateChange(t.id)}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                    template === t.id
-                      ? 'bg-slate-900 text-white shadow-xs font-semibold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{t.icon}</span>
-                  <span>{t.label}</span>
-                </button>
-              ))}
-            </>
+    <div className="flex flex-col items-center gap-3 w-full">
+      {/* Quick Studio Bar: Templates + Rearrange + Design + PDF Preview + Download */}
+      <div className="no-print bg-white border border-slate-200 shadow-2xs rounded-xl p-2 flex flex-wrap items-center justify-between gap-2 text-xs w-full max-w-[850px]">
+        {/* Left: Templates */}
+        {onTemplateChange && (
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-slate-400 font-semibold px-1 text-[11px] uppercase tracking-wider">Format:</span>
+            {templatesList.map(t => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onTemplateChange(t.id)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                  template === t.id
+                    ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <span>{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Right: Quick Studio Tools */}
+        <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+          {onOpenRearrange && (
+            <button
+              type="button"
+              onClick={onOpenRearrange}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              title="Rearrange section order"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Rearrange</span>
+            </button>
+          )}
+
+          {onOpenDesign && (
+            <button
+              type="button"
+              onClick={onOpenDesign}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+              title="Customize fonts, sizing & photo"
+            >
+              <Palette className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Design & Font</span>
+            </button>
+          )}
+
+          {onOpenPdfPreview && (
+            <button
+              type="button"
+              onClick={onOpenPdfPreview}
+              className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer shadow-2xs"
+              title="Preview exact multi-page PDF before downloading"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Preview PDF</span>
+            </button>
           )}
 
           {onDownloadPdf && (
-            <div className="flex items-center gap-1.5 ml-auto pl-2 border-l border-slate-200">
-              <button
-                type="button"
-                onClick={onDownloadPdf}
-                disabled={isDownloadingPdf}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow-xs disabled:opacity-60"
-                title="Download PDF directly to your device"
-              >
-                {isDownloadingPdf ? (
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Download className="w-3.5 h-3.5" />
-                )}
-                <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold text-xs text-white bg-slate-900 hover:bg-slate-800 transition-all cursor-pointer shadow-xs disabled:opacity-60"
+              title="Download PDF directly to your device"
+            >
+              {isDownloadingPdf ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              <span>{isDownloadingPdf ? 'Generating...' : 'Download'}</span>
+            </button>
           )}
         </div>
-      )}
+      </div>
 
       {/* Paper Container */}
       <div className="bg-slate-200/60 p-4 sm:p-6 rounded-2xl flex justify-center overflow-x-auto w-full">
@@ -82,162 +158,220 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'naukri' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 font-sans leading-normal"
-            style={{ fontSize: '10.5pt' }}
+            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 leading-normal"
+            style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Authority & Immediate Recruiter Metadata */}
-            <header className="border-b-2 border-slate-900 pb-3.5 mb-4 text-center">
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight uppercase mb-1">
-                {resume.fullName || 'Candidate Name'}
-              </h1>
-              <p className="text-[13px] sm:text-base font-bold text-slate-800 tracking-wide uppercase mb-2">
-                {resume.title || 'Product / Project Manager | Strategy & Consulting'}
-              </p>
+            <header className="border-b-2 pb-3.5 mb-4" style={{ borderColor: primaryColor }}>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+                <div className="flex-1">
+                  <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight uppercase mb-1" style={{ color: primaryColor }}>
+                    {resume.fullName || 'Candidate Name'}
+                  </h1>
+                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-2`}>
+                    {resume.title || 'Product / Project Manager | Strategy & Consulting'}
+                  </p>
 
-              {/* Contact info */}
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-slate-700 font-medium mb-2">
-                {resume.email && <span>{resume.email}</span>}
-                {resume.phone && <span>• {resume.phone}</span>}
-                {resume.location && <span>• {resume.location}</span>}
-                {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
-              </div>
+                  {/* Contact info */}
+                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 ${getFontSizeClass()} text-slate-700 font-medium mb-2`}>
+                    {resume.email && <span>{resume.email}</span>}
+                    {resume.phone && <span>• {resume.phone}</span>}
+                    {resume.location && <span>• {resume.location}</span>}
+                    {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+                  </div>
 
-              {/* Indian Recruiter Metadata (Total Exp, Preferred Locations) */}
-              {(resume.totalExperience || resume.preferredLocations) && (
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-1 border-t border-slate-200">
-                  {resume.totalExperience && (
-                    <span
-                      style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
-                      className="bg-slate-100 text-slate-900 border border-slate-300 font-bold text-[11px]"
-                    >
-                      Experience: <strong className="text-slate-950 font-black">{resume.totalExperience}</strong>
-                    </span>
-                  )}
-                  {resume.preferredLocations && (
-                    <span
-                      style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
-                      className="bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium text-[11px]"
-                    >
-                      <span className="font-semibold text-indigo-700">Preferred Locations: </span>
-                      <span className="text-slate-800">{resume.preferredLocations}</span>
-                    </span>
+                  {/* Indian Recruiter Metadata (Total Exp, Preferred Locations) */}
+                  {(resume.totalExperience || resume.preferredLocations) && (
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-2 mt-1 border-t border-slate-200">
+                      {resume.totalExperience && (
+                        <span
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
+                          className="bg-slate-100 text-slate-900 border border-slate-300 font-bold text-[11px]"
+                        >
+                          Experience: <strong className="text-slate-950 font-black">{resume.totalExperience}</strong>
+                        </span>
+                      )}
+                      {resume.preferredLocations && (
+                        <span
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
+                          className="bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium text-[11px]"
+                        >
+                          <span className="font-semibold text-indigo-700">Preferred Locations: </span>
+                          <span className="text-slate-800">{resume.preferredLocations}</span>
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+
+                {/* Candidate Photo (Enhancv Style) */}
+                {showPhoto && (
+                  <div className="w-24 h-24 rounded-full border-2 border-slate-300 overflow-hidden shadow-md shrink-0">
+                    <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
             </header>
 
-            {/* Professional Profile & Summary */}
-            {resume.summary && (
-              <section className="mb-4">
-                <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
-                    Executive Profile Summary
-                  </h2>
-                </div>
-                <p className="text-[13px] text-slate-800 leading-relaxed text-justify">
-                  {resume.summary}
-                </p>
-              </section>
-            )}
+            {/* Dynamic Ordered Sections (Rearrangeable) */}
+            {(resume.sectionOrder && resume.sectionOrder.length > 0
+              ? resume.sectionOrder
+              : (['summary', 'skills', 'experience', 'education', 'certifications', 'projects'] as ResumeSectionId[])
+            ).map((secId) => {
+              if ((resume.hiddenSections || []).includes(secId)) return null;
 
-            {/* Key Competencies / Areas of Excellence */}
-            {resume.skills && resume.skills.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
-                    Key Competencies & Technical Capabilities
-                  </h2>
-                </div>
-                <div className="space-y-1.5 text-[13px]">
-                  {resume.skills.map((cat) => (
-                    <div key={cat.id} className="leading-relaxed">
-                      <span className="font-bold text-slate-950">{cat.categoryName}: </span>
-                      <span className="text-slate-800">{cat.skills.join(' • ')}</span>
+              if (secId === 'summary' && resume.summary) {
+                return (
+                  <section key="summary" className="mb-4">
+                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Executive Profile Summary
+                      </h2>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                    <p className={`${getFontSizeClass()} text-slate-800 leading-relaxed text-justify`}>
+                      {resume.summary}
+                    </p>
+                  </section>
+                );
+              }
 
-            {/* Work Experience */}
-            {resume.experience && resume.experience.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b-2 border-slate-900 pb-1 mb-2.5">
-                  <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
-                    Professional Experience
-                  </h2>
-                </div>
-                <div className="space-y-4">
-                  {resume.experience.map((exp) => (
-                    <div key={exp.id}>
-                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
-                        <div>
-                          <span className="font-bold text-[13px] text-slate-950">{exp.role}</span>
-                          <span className="text-[13px] font-semibold text-slate-800"> | {exp.company}</span>
+              if (secId === 'skills' && resume.skills && resume.skills.length > 0) {
+                return (
+                  <section key="skills" className="mb-4">
+                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Key Competencies & Technical Capabilities
+                      </h2>
+                    </div>
+                    <div className={`space-y-1.5 ${getFontSizeClass()}`}>
+                      {resume.skills.map((cat) => (
+                        <div key={cat.id} className="leading-relaxed">
+                          <span className="font-bold text-slate-950">{cat.categoryName}: </span>
+                          <span className="text-slate-800">{cat.skills.join(' • ')}</span>
                         </div>
-                        <div className="text-[13px] text-slate-600 font-semibold italic shrink-0">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
-                          {exp.location ? ` (${exp.location})` : ''}
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (secId === 'experience' && resume.experience && resume.experience.length > 0) {
+                return (
+                  <section key="experience" className="mb-4">
+                    <div className="border-b-2 pb-1 mb-2.5" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Professional Experience
+                      </h2>
+                    </div>
+                    <div className="space-y-4">
+                      {resume.experience.map((exp) => (
+                        <div key={exp.id}>
+                          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
+                            <div>
+                              <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
+                              <span className={`${getFontSizeClass()} font-semibold text-slate-800`}> | {exp.company}</span>
+                            </div>
+                            <div className={`${getFontSizeClass()} text-slate-600 font-semibold italic shrink-0`}>
+                              {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                              {exp.location ? ` (${exp.location})` : ''}
+                            </div>
+                          </div>
+
+                          <ul className={`list-disc list-outside ml-4 mt-1.5 space-y-1 ${getFontSizeClass()} text-slate-800 leading-normal`}>
+                            {exp.bullets.map((b, i) => (
+                              <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
+                            ))}
+                          </ul>
                         </div>
-                      </div>
-
-                      <ul className="list-disc list-outside ml-4 mt-1.5 space-y-1 text-[13px] text-slate-800 leading-normal">
-                        {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                        ))}
-                      </ul>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                  </section>
+                );
+              }
 
-            {/* Academic Credentials / Education */}
-            {resume.education && resume.education.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
-                    Education & Academic Credentials
-                  </h2>
-                </div>
-                <div className="space-y-1.5">
-                  {resume.education.map((edu) => (
-                    <div key={edu.id} className="flex items-baseline justify-between text-[13px] break-inside-avoid">
-                      <div>
-                        <span className="font-bold text-slate-950">{edu.degree}</span>
-                        <span className="text-slate-800"> — {edu.institution}</span>
-                        {edu.gpa && <span className="text-slate-600 font-medium"> ({edu.gpa})</span>}
-                      </div>
-                      <div className="text-slate-600 font-semibold italic shrink-0">
-                        {edu.graduationDate}
-                      </div>
+              if (secId === 'education' && resume.education && resume.education.length > 0) {
+                return (
+                  <section key="education" className="mb-4">
+                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Education & Academic Credentials
+                      </h2>
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                    <div className="space-y-1.5">
+                      {resume.education.map((edu) => (
+                        <div key={edu.id} className={`flex items-baseline justify-between ${getFontSizeClass()} break-inside-avoid`}>
+                          <div>
+                            <span className="font-bold text-slate-950">{edu.degree}</span>
+                            <span className="text-slate-800"> — {edu.institution}</span>
+                            {edu.gpa && <span className="text-slate-600 font-medium"> ({edu.gpa})</span>}
+                          </div>
+                          <div className="text-slate-600 font-semibold italic shrink-0">
+                            {edu.graduationDate}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
 
-            {/* Professional Certifications */}
-            {resume.certifications && resume.certifications.length > 0 && (
-              <section className="mb-3 break-inside-avoid">
-                <div className="border-b-2 border-slate-900 pb-1 mb-2">
-                  <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
-                    Professional Certifications & Credentials
-                  </h2>
-                </div>
-                <div className="flex flex-wrap gap-1.5 text-[13px]">
-                  {resume.certifications.map((cert, i) => (
-                    <span
-                      key={i}
-                      style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 8px', borderRadius: '4px' }}
-                      className="bg-slate-100 text-slate-800 border border-slate-200 font-medium text-[13px] break-inside-avoid"
-                    >
-                      {cert}
-                    </span>
-                  ))}
-                </div>
-              </section>
-            )}
+              if (secId === 'certifications' && resume.certifications && resume.certifications.length > 0) {
+                return (
+                  <section key="certifications" className="mb-3 break-inside-avoid">
+                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Professional Certifications & Credentials
+                      </h2>
+                    </div>
+                    <div className={`flex flex-wrap gap-1.5 ${getFontSizeClass()}`}>
+                      {resume.certifications.map((cert, i) => (
+                        <span
+                          key={i}
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 8px', borderRadius: '4px' }}
+                          className={`bg-slate-100 text-slate-800 border border-slate-200 font-medium ${getFontSizeClass()} break-inside-avoid`}
+                        >
+                          {cert}
+                        </span>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (secId === 'projects' && resume.projects && resume.projects.length > 0) {
+                return (
+                  <section key="projects" className="mb-4 break-inside-avoid">
+                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
+                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                        Projects & Strategic Deliverables
+                      </h2>
+                    </div>
+                    <div className="space-y-3">
+                      {resume.projects.map((proj) => (
+                        <div key={proj.id} className="break-inside-avoid">
+                          <div className="flex items-baseline justify-between gap-1">
+                            <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{proj.name}</span>
+                            {proj.technologies && proj.technologies.length > 0 && (
+                              <span className="text-xs text-slate-600 italic">({proj.technologies.join(', ')})</span>
+                            )}
+                          </div>
+                          <p className={`${getFontSizeClass()} text-slate-700 mt-0.5`}>{proj.description}</p>
+                          {proj.bullets && proj.bullets.length > 0 && (
+                            <ul className={`list-disc list-outside ml-4 mt-1 space-y-0.5 ${getFontSizeClass()} text-slate-800`}>
+                              {proj.bullets.map((b, i) => (
+                                <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              return null;
+            })}
           </div>
         )}
 

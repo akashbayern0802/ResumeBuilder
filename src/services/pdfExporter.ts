@@ -77,139 +77,150 @@ function findNearestWhitespaceRow(
  * 3. Scans canvas pixels to slice strictly at whitespace gaps between lines.
  * 4. Renders each slice onto an exact A4 page canvas with 300 DPI sharpness.
  */
-export async function exportElementToPdf(elementId: string, filename: string): Promise<void> {
+export interface PdfRenderResult {
+  pages: string[];
+  pdf: jsPDF;
+  totalPages: number;
+}
+
+/**
+ * Renders the resume element into discrete high-resolution A4 page images and a jsPDF instance.
+ * Allows interactive multi-page PDF previewing before downloading.
+ */
+export async function renderElementPdfPages(elementId: string): Promise<PdfRenderResult> {
   const element = document.getElementById(elementId);
   if (!element) {
-    console.warn(`Element with id ${elementId} not found, falling back to window.print()`);
-    window.print();
-    return;
+    throw new Error(`Element with id ${elementId} not found`);
   }
 
-  try {
-    // 1. Measure positions of all atomic blocks that should avoid being split
-    const containerRect = element.getBoundingClientRect();
-    const avoidElements: { top: number; bottom: number }[] = [];
+  // 1. Measure positions of all atomic blocks that should avoid being split
+  const containerRect = element.getBoundingClientRect();
+  const avoidElements: { top: number; bottom: number }[] = [];
 
-    // Query candidate atomic elements: bullet points, headers, job items, and section blocks
-    const candidates = element.querySelectorAll('li, h1, h2, h3, header, .resume-experience-item, section > div > div');
-    candidates.forEach(child => {
-      const rect = child.getBoundingClientRect();
-      const top = rect.top - containerRect.top;
-      const bottom = rect.bottom - containerRect.top;
-      // Only track elements with measurable height
-      if (bottom - top > 8) {
-        avoidElements.push({ top, bottom });
-      }
-    });
+  // Query candidate atomic elements: bullet points, headers, job items, and section blocks
+  const candidates = element.querySelectorAll('li, h1, h2, h3, header, .resume-experience-item, section > div > div');
+  candidates.forEach(child => {
+    const rect = child.getBoundingClientRect();
+    const top = rect.top - containerRect.top;
+    const bottom = rect.bottom - containerRect.top;
+    if (bottom - top > 8) {
+      avoidElements.push({ top, bottom });
+    }
+  });
 
-    // 2. Render element to high-res canvas (2x scale for 300 DPI sharpness)
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      scrollX: 0,
-      scrollY: -window.scrollY
-    });
+  // 2. Render element to high-res canvas (2x scale for 300 DPI sharpness)
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    logging: false,
+    backgroundColor: '#ffffff',
+    scrollX: 0,
+    scrollY: -window.scrollY
+  });
 
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) {
-      throw new Error('Could not obtain canvas 2D rendering context');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    throw new Error('Could not obtain canvas 2D rendering context');
+  }
+
+  // 3. Map DOM avoid elements to canvas coordinates
+  const scaleY = canvas.height / element.scrollHeight;
+  const canvasAvoidZones = avoidElements.map(e => ({
+    top: Math.round(e.top * scaleY),
+    bottom: Math.round(e.bottom * scaleY)
+  }));
+
+  // Standard A4 dimensions
+  const A4_WIDTH_MM = 210;
+  const A4_HEIGHT_MM = 297;
+  const A4_ASPECT_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
+  const idealPageHeightPx = Math.round(canvas.width * A4_ASPECT_RATIO);
+
+  // 4. Calculate smart page slices
+  let currentStartY = 0;
+  const pageSlices: { startY: number; endY: number }[] = [];
+
+  while (currentStartY < canvas.height) {
+    const remainingHeight = canvas.height - currentStartY;
+
+    if (remainingHeight <= idealPageHeightPx) {
+      pageSlices.push({ startY: currentStartY, endY: canvas.height });
+      break;
     }
 
-    // 3. Map DOM avoid elements to canvas coordinates
-    const scaleY = canvas.height / element.scrollHeight;
-    const canvasAvoidZones = avoidElements.map(e => ({
-      top: Math.round(e.top * scaleY),
-      bottom: Math.round(e.bottom * scaleY)
-    }));
+    const idealCutY = currentStartY + idealPageHeightPx;
+    let targetCutY = idealCutY;
 
-    // Standard A4 dimensions
-    const A4_WIDTH_MM = 210;
-    const A4_HEIGHT_MM = 297;
-    const A4_ASPECT_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
-    const idealPageHeightPx = Math.round(canvas.width * A4_ASPECT_RATIO);
+    const straddling = canvasAvoidZones.find(
+      zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.40)
+    );
 
-    // 4. Calculate smart page slices
-    let currentStartY = 0;
-    const pageSlices: { startY: number; endY: number }[] = [];
+    if (straddling) {
+      targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.5), straddling.top - 4);
+    }
 
-    while (currentStartY < canvas.height) {
-      const remainingHeight = canvas.height - currentStartY;
+    targetCutY = findNearestWhitespaceRow(ctx, canvas.width, targetCutY, currentStartY, 160);
 
-      // If the remaining content fits on the current page, take it all
-      if (remainingHeight <= idealPageHeightPx) {
-        pageSlices.push({ startY: currentStartY, endY: canvas.height });
-        break;
-      }
+    pageSlices.push({ startY: currentStartY, endY: targetCutY });
+    currentStartY = targetCutY;
+  }
 
-      // Calculate the ideal cut line
-      const idealCutY = currentStartY + idealPageHeightPx;
-      let targetCutY = idealCutY;
+  // 5. Build multi-page A4 PDF and collect page image data URLs
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
 
-      // Check if any bullet point or header straddles the ideal cut line
-      const straddling = canvasAvoidZones.find(
-        zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.40)
+  const pageImages: string[] = [];
+
+  for (let i = 0; i < pageSlices.length; i++) {
+    const slice = pageSlices[i];
+    const sliceHeightPx = slice.endY - slice.startY;
+
+    const pageCanvas = document.createElement('canvas');
+    pageCanvas.width = canvas.width;
+    pageCanvas.height = idealPageHeightPx;
+    const pageCtx = pageCanvas.getContext('2d');
+
+    if (pageCtx) {
+      pageCtx.fillStyle = '#ffffff';
+      pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      pageCtx.drawImage(
+        canvas,
+        0, slice.startY, canvas.width, sliceHeightPx,
+        0, 0, canvas.width, sliceHeightPx
       );
-
-      if (straddling) {
-        // Move the cut right before this element so it flows cleanly to the next page
-        targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.5), straddling.top - 4);
-      }
-
-      // Fine-tune target cut to land on a row of pure white pixels (between lines/paragraphs)
-      targetCutY = findNearestWhitespaceRow(ctx, canvas.width, targetCutY, currentStartY, 160);
-
-      pageSlices.push({ startY: currentStartY, endY: targetCutY });
-      currentStartY = targetCutY;
     }
 
-    // 5. Build the multi-page A4 PDF
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
+    const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+    pageImages.push(pageImgData);
 
-    for (let i = 0; i < pageSlices.length; i++) {
-      const slice = pageSlices[i];
-      const sliceHeightPx = slice.endY - slice.startY;
-
-      // Create a page canvas sized exactly to A4
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = idealPageHeightPx;
-      const pageCtx = pageCanvas.getContext('2d');
-
-      if (pageCtx) {
-        // Fill A4 background with crisp white
-        pageCtx.fillStyle = '#ffffff';
-        pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-
-        // Draw the slice at the top of the A4 page
-        pageCtx.drawImage(
-          canvas,
-          0, slice.startY, canvas.width, sliceHeightPx,
-          0, 0, canvas.width, sliceHeightPx
-        );
-      }
-
-      const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
-
-      if (i > 0) {
-        pdf.addPage();
-      }
-
-      pdf.addImage(pageImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
-
-      // Cleanup page canvas
-      pageCanvas.width = 0;
-      pageCanvas.height = 0;
+    if (i > 0) {
+      pdf.addPage();
     }
 
-    // 6. Save the generated PDF directly to downloads
+    pdf.addImage(pageImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+
+    pageCanvas.width = 0;
+    pageCanvas.height = 0;
+  }
+
+  return {
+    pages: pageImages,
+    pdf,
+    totalPages: pageSlices.length
+  };
+}
+
+/**
+ * Directly downloads the resume element as a high-resolution PDF file.
+ */
+export async function exportElementToPdf(elementId: string, filename: string): Promise<void> {
+  try {
+    const result = await renderElementPdfPages(elementId);
     const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-    pdf.save(safeFilename);
+    result.pdf.save(safeFilename);
   } catch (error) {
     console.error('Smart PDF export encountered an error, falling back to print dialog:', error);
     window.print();

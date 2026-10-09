@@ -34,6 +34,16 @@ export interface SkillCategory {
   skills: string[];
 }
 
+export type ResumeSectionId = 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications';
+
+export interface ResumeDesignSettings {
+  fontFamily: 'inter' | 'roboto' | 'merriweather' | 'playfair' | 'garamond' | 'sans';
+  fontSize: 'compact' | 'normal' | 'relaxed';
+  lineSpacing: 'tight' | 'normal' | 'relaxed';
+  primaryColor?: string;
+  showPhoto?: boolean;
+}
+
 export interface ResumeData {
   id: string;
   fullName: string;
@@ -44,6 +54,7 @@ export interface ResumeData {
   website?: string;
   linkedin?: string;
   github?: string;
+  photoUrl?: string;
   summary: string;
   skills: SkillCategory[];
   experience: WorkExperience[];
@@ -52,6 +63,9 @@ export interface ResumeData {
   certifications?: string[];
   totalExperience?: string;
   preferredLocations?: string;
+  sectionOrder?: ResumeSectionId[];
+  hiddenSections?: ResumeSectionId[];
+  design?: ResumeDesignSettings;
 }
 
 export interface JobDescription {

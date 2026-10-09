@@ -13,7 +13,11 @@ import {
   ChevronDown,
   ChevronUp,
   UploadCloud,
-  Award
+  Award,
+  Maximize2,
+  Minimize2,
+  ArrowUpDown,
+  Palette
 } from 'lucide-react';
 import { extractTextFromFile, parseExtractedTextToResume } from '../services/documentParser';
 
@@ -22,6 +26,8 @@ interface Props {
   onChange: (resume: ResumeData) => void;
   onOptimizeBullet: (experienceId: string, bulletIndex: number) => void;
   onOptimizeSummary: () => void;
+  onOpenRearrange?: () => void;
+  onOpenDesign?: () => void;
 }
 
 type TabType = 'contact' | 'summary' | 'experience' | 'skills' | 'certifications' | 'education' | 'projects';
@@ -30,8 +36,11 @@ export const ResumeEditor: React.FC<Props> = ({
   resume,
   onChange,
   onOptimizeBullet,
-  onOptimizeSummary
+  onOptimizeSummary,
+  onOpenRearrange,
+  onOpenDesign
 }) => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('experience');
   const [newSkillInput, setNewSkillInput] = useState<{ [catId: string]: string }>({});
   const [expandedExp, setExpandedExp] = useState<{ [expId: string]: boolean }>({
@@ -246,9 +255,58 @@ export const ResumeEditor: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col overflow-hidden">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-slate-200 bg-slate-50/70 overflow-x-auto p-1.5 gap-1 text-xs">
+    <div className={isFullscreen ? "fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-2 sm:p-6 flex flex-col justify-center items-center overflow-hidden animate-in fade-in duration-150" : "flex flex-col"}>
+      <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden w-full ${isFullscreen ? 'max-w-6xl h-[94vh] shadow-2xl' : ''}`}>
+        {/* Editor Studio Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-200 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-800">Resume Editor</span>
+            {isFullscreen && (
+              <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full">
+                Full Screen Studio Mode
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {onOpenRearrange && (
+              <button
+                type="button"
+                onClick={onOpenRearrange}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Rearrange section order"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Rearrange</span>
+              </button>
+            )}
+
+            {onOpenDesign && (
+              <button
+                type="button"
+                onClick={onOpenDesign}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                title="Customize fonts & styles"
+              >
+                <Palette className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Design & Font</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsFullscreen(f => !f)}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-colors cursor-pointer shadow-2xs"
+              title={isFullscreen ? "Exit Fullscreen" : "Expand to Fullscreen"}
+            >
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span>{isFullscreen ? "Exit Fullscreen" : "Full Screen Studio"}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 bg-slate-50/70 overflow-x-auto p-1.5 gap-1 text-xs shrink-0">
         <button
           type="button"
           onClick={() => setActiveTab('experience')}
@@ -361,7 +419,7 @@ export const ResumeEditor: React.FC<Props> = ({
       </div>
 
       {/* Tab Content Panes */}
-      <div className="p-5 max-h-[600px] overflow-y-auto">
+      <div className={`p-5 overflow-y-auto ${isFullscreen ? 'flex-1 min-h-0' : 'max-h-[600px]'}`}>
         {/* TAB 1: WORK EXPERIENCE */}
         {activeTab === 'experience' && (
           <div className="space-y-4">
@@ -917,6 +975,7 @@ export const ResumeEditor: React.FC<Props> = ({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
