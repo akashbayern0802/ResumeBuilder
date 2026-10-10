@@ -20,6 +20,7 @@ interface Props {
   onOpenPdfPreview?: () => void;
   onOpenRearrange?: () => void;
   onOpenDesign?: () => void;
+  onResumeChange?: (resume: ResumeData) => void;
   isDownloadingPdf?: boolean;
 }
 
@@ -31,6 +32,7 @@ export const ResumePreview: React.FC<Props> = ({
   onOpenPdfPreview,
   onOpenRearrange,
   onOpenDesign,
+  onResumeChange,
   isDownloadingPdf
 }) => {
 
@@ -48,6 +50,25 @@ export const ResumePreview: React.FC<Props> = ({
 
   // Design tokens derived from resume.design
   const design = resume.design;
+  const is2PageFit = Boolean(design?.fitTwoPages || design?.fontSize === 'compact');
+
+  const handleToggleFitTwoPages = () => {
+    if (!onResumeChange) return;
+    const nextVal = !is2PageFit;
+    onResumeChange({
+      ...resume,
+      design: {
+        ...resume.design,
+        fitTwoPages: nextVal,
+        fontSize: nextVal ? 'compact' : 'normal',
+        lineSpacing: nextVal ? 'tight' : 'normal',
+        fontFamily: resume.design?.fontFamily || 'roboto',
+        primaryColor: resume.design?.primaryColor || '#0f172a',
+        showPhoto: resume.design?.showPhoto ?? false
+      }
+    });
+  };
+
   const getFontFamily = () => {
     switch (design?.fontFamily) {
       case 'roboto': return "'Roboto', sans-serif";
@@ -59,12 +80,22 @@ export const ResumePreview: React.FC<Props> = ({
   };
 
   const getFontSizeClass = () => {
+    if (is2PageFit) {
+      return 'text-[11px] sm:text-[11.5px] leading-snug';
+    }
     switch (design?.fontSize) {
       case 'compact': return 'text-[12px] leading-normal';
       case 'relaxed': return 'text-[14px] leading-relaxed';
       default: return 'text-[13px] leading-normal';
     }
   };
+
+  // Dynamic layout tokens for 2-page fit compaction
+  const containerPadding = is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-12';
+  const headerMargin = is2PageFit ? 'border-b-2 pb-2 mb-2.5' : 'border-b-2 pb-3.5 mb-4';
+  const sectionMargin = is2PageFit ? 'mb-2 sm:mb-2.5' : 'mb-4';
+  const jobSpacing = is2PageFit ? 'space-y-2' : 'space-y-4';
+  const bulletSpacing = is2PageFit ? 'mt-1 space-y-0.5' : 'mt-1.5 space-y-1';
 
   const primaryColor = design?.primaryColor || '#0f172a';
   const showPhoto = Boolean(design?.showPhoto && resume.photoUrl);
@@ -97,6 +128,21 @@ export const ResumePreview: React.FC<Props> = ({
 
         {/* Right: Quick Studio Tools */}
         <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+          {onResumeChange && (
+            <button
+              type="button"
+              onClick={handleToggleFitTwoPages}
+              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer border ${
+                is2PageFit
+                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-1 ring-emerald-500'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-300'
+              }`}
+              title="Automatically tightens margins, fonts, and padding to fit resume inside 2 pages"
+            >
+              <span>⚡ {is2PageFit ? '2-Page Fit: ON' : '2-Page Fit'}</span>
+            </button>
+          )}
+
           {onOpenRearrange && (
             <button
               type="button"
@@ -160,22 +206,22 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'naukri' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 leading-normal"
+            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Authority & Immediate Recruiter Metadata */}
-            <header className="border-b-2 pb-3.5 mb-4" style={{ borderColor: primaryColor }}>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <header className={headerMargin} style={{ borderColor: primaryColor }}>
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                 <div className="flex-1">
-                  <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight uppercase mb-1" style={{ color: primaryColor }}>
+                  <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl mb-0.5' : 'text-3xl sm:text-4xl mb-1'} font-black text-slate-950 tracking-tight uppercase`} style={{ color: primaryColor }}>
                     {resume.fullName || 'Candidate Name'}
                   </h1>
-                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-2`}>
+                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
                     {resume.title || 'Product / Project Manager | Strategy & Consulting'}
                   </p>
 
                   {/* Contact info */}
-                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1 ${getFontSizeClass()} text-slate-700 font-medium mb-2`}>
+                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
                     {resume.email && <span>{resume.email}</span>}
                     {resume.phone && <span>• {resume.phone}</span>}
                     {resume.location && <span>• {resume.location}</span>}
@@ -184,19 +230,19 @@ export const ResumePreview: React.FC<Props> = ({
 
                   {/* Indian Recruiter Metadata (Total Exp, Preferred Locations) */}
                   {(resume.totalExperience || resume.preferredLocations) && (
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-2 mt-1 border-t border-slate-200">
+                    <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-2 ${is2PageFit ? 'pt-1.5 mt-0.5' : 'pt-2 mt-1'} border-t border-slate-200`}>
                       {resume.totalExperience && (
                         <span
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
-                          className="bg-slate-100 text-slate-900 border border-slate-300 font-bold text-[11px]"
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
+                          className={`bg-slate-100 text-slate-900 border border-slate-300 font-bold ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
                         >
                           Experience: <strong className="text-slate-950 font-black">{resume.totalExperience}</strong>
                         </span>
                       )}
                       {resume.preferredLocations && (
                         <span
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 10px', borderRadius: '4px' }}
-                          className="bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium text-[11px]"
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
+                          className={`bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
                         >
                           <span className="font-semibold text-indigo-700">Preferred Locations: </span>
                           <span className="text-slate-800">{resume.preferredLocations}</span>
@@ -208,7 +254,7 @@ export const ResumePreview: React.FC<Props> = ({
 
                 {/* Candidate Photo (Enhancv Style) */}
                 {showPhoto && (
-                  <div className="w-24 h-24 rounded-full border-2 border-slate-300 overflow-hidden shadow-md shrink-0">
+                  <div className={`${is2PageFit ? 'w-20 h-20' : 'w-24 h-24'} rounded-full border-2 border-slate-300 overflow-hidden shadow-md shrink-0`}>
                     <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -224,9 +270,9 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'summary' && resume.summary) {
                 return (
-                  <section key="summary" className="mb-4">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="summary" className={sectionMargin}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Executive Profile Summary
                       </h2>
                     </div>
@@ -239,15 +285,15 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'skills' && resume.skills && resume.skills.length > 0) {
                 return (
-                  <section key="skills" className="mb-4">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="skills" className={sectionMargin}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Key Competencies & Technical Capabilities
                       </h2>
                     </div>
-                    <div className={`space-y-1.5 ${getFontSizeClass()}`}>
+                    <div className={`${is2PageFit ? 'space-y-1' : 'space-y-1.5'} ${getFontSizeClass()}`}>
                       {resume.skills.map((cat) => (
-                        <div key={cat.id} className="leading-relaxed">
+                        <div key={cat.id} className="leading-snug">
                           <span className="font-bold text-slate-950">{cat.categoryName}: </span>
                           <span className="text-slate-800">{cat.skills.join(' • ')}</span>
                         </div>
@@ -259,13 +305,13 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'experience' && resume.experience && resume.experience.length > 0) {
                 return (
-                  <section key="experience" className="mb-4">
-                    <div className="border-b-2 pb-1 mb-2.5" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="experience" className={sectionMargin}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Professional Experience
                       </h2>
                     </div>
-                    <div className="space-y-4">
+                    <div className={jobSpacing}>
                       {resume.experience.map((exp) => (
                         <div key={exp.id}>
                           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
@@ -279,7 +325,7 @@ export const ResumePreview: React.FC<Props> = ({
                             </div>
                           </div>
 
-                          <ul className={`list-disc list-outside ml-4 mt-1.5 space-y-1 ${getFontSizeClass()} text-slate-800 leading-normal`}>
+                          <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
                             {exp.bullets.map((b, i) => (
                               <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                             ))}
@@ -293,13 +339,13 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'education' && resume.education && resume.education.length > 0) {
                 return (
-                  <section key="education" className="mb-4">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="education" className={sectionMargin}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Education & Academic Credentials
                       </h2>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className={is2PageFit ? 'space-y-1' : 'space-y-1.5'}>
                       {resume.education.map((edu) => (
                         <div key={edu.id} className={`flex items-baseline justify-between ${getFontSizeClass()} break-inside-avoid`}>
                           <div>
@@ -319,9 +365,9 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'certifications' && resume.certifications && resume.certifications.length > 0) {
                 return (
-                  <section key="certifications" className="mb-3 break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="certifications" className={`${sectionMargin} break-inside-avoid`}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Professional Certifications & Credentials
                       </h2>
                     </div>
@@ -329,7 +375,7 @@ export const ResumePreview: React.FC<Props> = ({
                       {resume.certifications.map((cert, i) => (
                         <span
                           key={i}
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: '3px 8px', borderRadius: '4px' }}
+                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 6px' : '3px 8px', borderRadius: '4px' }}
                           className={`bg-slate-100 text-slate-800 border border-slate-200 font-medium ${getFontSizeClass()} break-inside-avoid`}
                         >
                           {cert}
@@ -342,13 +388,13 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'projects' && resume.projects && resume.projects.length > 0) {
                 return (
-                  <section key="projects" className="mb-4 break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[13px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                  <section key="projects" className={`${sectionMargin} break-inside-avoid`}>
+                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Projects & Strategic Deliverables
                       </h2>
                     </div>
-                    <div className="space-y-3">
+                    <div className={jobSpacing}>
                       {resume.projects.map((proj) => (
                         <div key={proj.id} className="break-inside-avoid">
                           <div className="flex items-baseline justify-between gap-1">
@@ -359,7 +405,7 @@ export const ResumePreview: React.FC<Props> = ({
                           </div>
                           <p className={`${getFontSizeClass()} text-slate-700 mt-0.5`}>{proj.description}</p>
                           {proj.bullets && proj.bullets.length > 0 && (
-                            <ul className={`list-disc list-outside ml-4 mt-1 space-y-0.5 ${getFontSizeClass()} text-slate-800`}>
+                            <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} ${getFontSizeClass()} text-slate-800`}>
                               {proj.bullets.map((b, i) => (
                                 <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                               ))}
@@ -383,20 +429,20 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'double_column' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-6 sm:p-10 text-slate-900 leading-normal"
+            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Full-Width Clean Double-Border Header */}
-            <header className="border-b-4 border-double pb-3 mb-4" style={{ borderColor: primaryColor }}>
+            <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2.5' : 'pb-3 mb-4'}`} style={{ borderColor: primaryColor }}>
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
                 <div className="flex-1">
-                  <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight uppercase mb-0.5" style={{ color: primaryColor }}>
+                  <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
                     {resume.fullName || 'Candidate Name'}
                   </h1>
-                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-1.5`}>
+                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-1`}>
                     {resume.title || 'Product / Project Manager | Strategy & Consulting'}
                   </p>
-                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-1 ${getFontSizeClass()} text-slate-600 font-medium`}>
+                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-0.5 ${getFontSizeClass()} text-slate-600 font-medium`}>
                     {resume.email && <span>{resume.email}</span>}
                     {resume.phone && <span>• {resume.phone}</span>}
                     {resume.location && <span>• {resume.location}</span>}
@@ -405,7 +451,7 @@ export const ResumePreview: React.FC<Props> = ({
                 </div>
 
                 {showPhoto && (
-                  <div className="w-20 h-20 rounded-full border-2 border-slate-300 overflow-hidden shadow-sm shrink-0">
+                  <div className={`${is2PageFit ? 'w-16 h-16' : 'w-20 h-20'} rounded-full border-2 border-slate-300 overflow-hidden shadow-sm shrink-0`}>
                     <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -413,19 +459,19 @@ export const ResumePreview: React.FC<Props> = ({
             </header>
 
             {/* 2-Column Split Body: Left 35% Sidebar, Right 65% Main Track */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+            <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
               {/* LEFT SIDEBAR (md:col-span-4): Compact parallel track */}
-              <div className="md:col-span-4 space-y-4">
+              <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
                 {/* Executive Summary */}
                 {resume.summary && (
                   <div className="break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-1.5" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
                         <FileText className="w-3.5 h-3.5 text-slate-700" />
                         Executive Profile
                       </h2>
                     </div>
-                    <p className="text-[12px] text-slate-800 leading-relaxed text-justify">
+                    <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
                       {resume.summary}
                     </p>
                   </div>
@@ -434,21 +480,21 @@ export const ResumePreview: React.FC<Props> = ({
                 {/* Key Competencies (Compact Tags) */}
                 {resume.skills && resume.skills.length > 0 && (
                   <div className="break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
                         <Wrench className="w-3.5 h-3.5 text-slate-700" />
                         Key Competencies
                       </h2>
                     </div>
-                    <div className="space-y-2">
+                    <div className={is2PageFit ? 'space-y-1.5' : 'space-y-2'}>
                       {resume.skills.map((cat) => (
-                        <div key={cat.id} className="text-[11.5px]">
+                        <div key={cat.id} className={is2PageFit ? 'text-[11px]' : 'text-[11.5px]'}>
                           <span className="font-bold text-slate-900 block mb-0.5">{cat.categoryName}</span>
                           <div className="flex flex-wrap gap-1">
                             {cat.skills.map((sk, idx) => (
                               <span
                                 key={idx}
-                                className="bg-slate-100 text-slate-800 border border-slate-200/80 px-1.5 py-0.5 rounded text-[11px] font-medium"
+                                className={`bg-slate-100 text-slate-800 border border-slate-200/80 ${is2PageFit ? 'px-1 py-0.2 text-[10px]' : 'px-1.5 py-0.5 text-[11px]'} rounded font-medium`}
                               >
                                 {sk}
                               </span>
@@ -463,18 +509,18 @@ export const ResumePreview: React.FC<Props> = ({
                 {/* Education */}
                 {resume.education && resume.education.length > 0 && (
                   <div className="break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-1.5" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
                         <GraduationCap className="w-3.5 h-3.5 text-slate-700" />
                         Education
                       </h2>
                     </div>
-                    <div className="space-y-2 text-[12px]">
+                    <div className={`${is2PageFit ? 'space-y-1.5 text-[11px]' : 'space-y-2 text-[12px]'}`}>
                       {resume.education.map((edu) => (
                         <div key={edu.id} className="border-l-2 border-slate-300 pl-2">
                           <div className="font-bold text-slate-950">{edu.degree}</div>
                           <div className="text-slate-800">{edu.institution}</div>
-                          <div className="text-[11px] text-slate-500 italic">
+                          <div className="text-[10.5px] text-slate-500 italic">
                             {edu.graduationDate} {edu.gpa ? `• GPA: ${edu.gpa}` : ''}
                           </div>
                         </div>
@@ -486,15 +532,15 @@ export const ResumePreview: React.FC<Props> = ({
                 {/* Certifications */}
                 {resume.certifications && resume.certifications.length > 0 && (
                   <div className="break-inside-avoid">
-                    <div className="border-b-2 pb-1 mb-1.5" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
                         <Award className="w-3.5 h-3.5 text-slate-700" />
                         Certifications
                       </h2>
                     </div>
-                    <div className="space-y-1 text-[11.5px] text-slate-800">
+                    <div className={`${is2PageFit ? 'space-y-0.5 text-[10.5px]' : 'space-y-1 text-[11.5px]'} text-slate-800`}>
                       {resume.certifications.map((cert, i) => (
-                        <div key={i} className="flex items-start gap-1.5 leading-snug">
+                        <div key={i} className="flex items-start gap-1 leading-snug">
                           <span className="text-slate-400 font-bold">•</span>
                           <span>{cert}</span>
                         </div>
@@ -505,7 +551,7 @@ export const ResumePreview: React.FC<Props> = ({
 
                 {/* Metadata Details */}
                 {(resume.totalExperience || resume.preferredLocations) && (
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-[11.5px] space-y-1 break-inside-avoid">
+                  <div className={`p-2 bg-slate-50 rounded-lg border border-slate-200 ${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} space-y-0.5 break-inside-avoid`}>
                     {resume.totalExperience && (
                       <div><strong className="text-slate-900">Total Exp:</strong> {resume.totalExperience}</div>
                     )}
@@ -517,29 +563,29 @@ export const ResumePreview: React.FC<Props> = ({
               </div>
 
               {/* RIGHT MAIN TRACK (md:col-span-8): Professional Experience & Projects */}
-              <div className="md:col-span-8 space-y-4">
+              <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
                 {/* Professional Experience */}
                 {resume.experience && resume.experience.length > 0 && (
                   <section>
-                    <div className="border-b-2 pb-1 mb-2.5" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12.5px] font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
                         <Briefcase className="w-3.5 h-3.5 text-slate-700" />
                         Professional Career History
                       </h2>
                     </div>
-                    <div className="space-y-3.5">
+                    <div className={is2PageFit ? 'space-y-2' : 'space-y-3.5'}>
                       {resume.experience.map((exp) => (
                         <div key={exp.id} className="break-inside-avoid">
                           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5">
                             <div>
-                              <span className="font-bold text-[12.5px] text-slate-950">{exp.role}</span>
-                              <span className="text-[12px] font-semibold text-slate-800"> | {exp.company}</span>
+                              <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} text-slate-950`}>{exp.role}</span>
+                              <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-semibold text-slate-800`}> | {exp.company}</span>
                             </div>
-                            <div className="text-[11.5px] text-slate-600 font-medium italic shrink-0">
+                            <div className={`${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 font-medium italic shrink-0`}>
                               {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `(${exp.location})` : ''}
                             </div>
                           </div>
-                          <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-[12px] text-slate-800 leading-normal">
+                          <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
                             {exp.bullets.map((b, i) => (
                               <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                             ))}
@@ -553,23 +599,23 @@ export const ResumePreview: React.FC<Props> = ({
                 {/* Projects & Deliverables */}
                 {resume.projects && resume.projects.length > 0 && (
                   <section className="break-inside-avoid pt-1">
-                    <div className="border-b-2 pb-1 mb-2" style={{ borderColor: primaryColor }}>
-                      <h2 className="text-[12.5px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Key Strategic Deliverables & Projects
                       </h2>
                     </div>
-                    <div className="space-y-2.5">
+                    <div className={jobSpacing}>
                       {resume.projects.map((proj) => (
-                        <div key={proj.id} className="break-inside-avoid text-[12px]">
+                        <div key={proj.id} className={`break-inside-avoid ${is2PageFit ? 'text-[11px]' : 'text-[12px]'}`}>
                           <div className="flex items-baseline justify-between">
                             <span className="font-bold text-slate-950">{proj.name}</span>
                             {proj.technologies && proj.technologies.length > 0 && (
-                              <span className="text-[11px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
+                              <span className="text-[10.5px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
                             )}
                           </div>
                           <p className="text-slate-700 mt-0.5">{proj.description}</p>
                           {proj.bullets && proj.bullets.length > 0 && (
-                            <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-slate-800">
+                            <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} text-slate-800`}>
                               {proj.bullets.map((b, i) => (
                                 <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                               ))}
@@ -591,18 +637,18 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'double_line' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-11 text-slate-900 leading-normal"
+            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-11'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Double-Line Top Authority Header */}
-            <header className="border-b-4 border-double pb-3 mb-4 text-center" style={{ borderColor: primaryColor }}>
-              <h1 className="text-3xl font-black text-slate-950 tracking-tight uppercase mb-1" style={{ color: primaryColor }}>
+            <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2' : 'pb-3 mb-4'} text-center`} style={{ borderColor: primaryColor }}>
+              <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
                 {resume.fullName || 'Candidate Name'}
               </h1>
-              <p className="text-[13px] font-bold text-slate-800 tracking-wider uppercase mb-1.5">
+              <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wider uppercase mb-1`}>
                 {resume.title || 'Product / Project Manager | Strategy & Consulting'}
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[12px] text-slate-700 font-medium">
+              <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium`}>
                 {resume.email && <span>{resume.email}</span>}
                 {resume.phone && <span>• {resume.phone}</span>}
                 {resume.location && <span>• {resume.location}</span>}
@@ -613,13 +659,13 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Executive Summary */}
             {resume.summary && (
-              <section className="mb-3.5">
-                <div className="border-b-2 border-t-2 py-0.5 mb-1.5" style={{ borderColor: primaryColor }}>
-                  <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Executive Profile Summary
                   </h2>
                 </div>
-                <p className="text-[12.5px] text-slate-800 leading-relaxed text-justify">
+                <p className={`${getFontSizeClass()} text-slate-800 leading-snug text-justify`}>
                   {resume.summary}
                 </p>
               </section>
@@ -627,13 +673,13 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Key Competencies: 2-Column Compact Grid */}
             {resume.skills && resume.skills.length > 0 && (
-              <section className="mb-3.5">
-                <div className="border-b-2 border-t-2 py-0.5 mb-1.5" style={{ borderColor: primaryColor }}>
-                  <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Core Competencies & Technical Skills
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-[12px]">
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-0.5 ${getFontSizeClass()}`}>
                   {resume.skills.map((cat) => (
                     <div key={cat.id} className="leading-snug">
                       <strong className="text-slate-950">{cat.categoryName}: </strong>
@@ -646,28 +692,28 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Professional Experience: Structured Double-Line Header */}
             {resume.experience && resume.experience.length > 0 && (
-              <section className="mb-3.5">
-                <div className="border-b-2 border-t-2 py-0.5 mb-2" style={{ borderColor: primaryColor }}>
-                  <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-2'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Professional Experience
                   </h2>
                 </div>
-                <div className="space-y-3">
+                <div className={jobSpacing}>
                   {resume.experience.map((exp) => (
                     <div key={exp.id} className="break-inside-avoid">
                       {/* Double-Line Experience Header */}
-                      <div className="border-b border-slate-200 pb-0.5 mb-1">
+                      <div className="border-b border-slate-200 pb-0.5 mb-0.5">
                         <div className="flex justify-between items-baseline">
-                          <span className="font-bold text-[13px] text-slate-950">{exp.role}</span>
-                          <span className="text-[12px] font-bold text-slate-800">{exp.company}</span>
+                          <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} text-slate-950`}>{exp.role}</span>
+                          <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold text-slate-800`}>{exp.company}</span>
                         </div>
-                        <div className="flex justify-between items-baseline text-[11.5px] text-slate-600 italic">
+                        <div className={`flex justify-between items-baseline ${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 italic`}>
                           <span>{exp.startDate} – {exp.current ? 'Present' : exp.endDate}</span>
                           <span>{exp.location || ''}</span>
                         </div>
                       </div>
 
-                      <ul className="list-disc list-outside ml-4 space-y-0.5 text-[12px] text-slate-800 leading-normal">
+                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
                         {exp.bullets.map((b, i) => (
                           <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
                         ))}
@@ -680,18 +726,18 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Academic Credentials & Education */}
             {resume.education && resume.education.length > 0 && (
-              <section className="mb-3 break-inside-avoid">
-                <div className="border-b-2 border-t-2 py-0.5 mb-1.5" style={{ borderColor: primaryColor }}>
-                  <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={`${sectionMargin} break-inside-avoid`}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Education & Credentials
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[12px]">
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 ${getFontSizeClass()}`}>
                   {resume.education.map((edu) => (
                     <div key={edu.id} className="border-l-2 border-slate-300 pl-2">
                       <div className="font-bold text-slate-950">{edu.degree}</div>
                       <div className="text-slate-800">{edu.institution}</div>
-                      <div className="text-[11px] text-slate-500 italic">{edu.graduationDate} {edu.gpa ? `(${edu.gpa})` : ''}</div>
+                      <div className="text-[10.5px] text-slate-500 italic">{edu.graduationDate} {edu.gpa ? `(${edu.gpa})` : ''}</div>
                     </div>
                   ))}
                 </div>
@@ -700,15 +746,15 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Certifications: Compact horizontal stream */}
             {resume.certifications && resume.certifications.length > 0 && (
-              <section className="mb-2 break-inside-avoid">
-                <div className="border-b-2 border-t-2 py-0.5 mb-1.5" style={{ borderColor: primaryColor }}>
-                  <h2 className="text-[12px] font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={`${sectionMargin} break-inside-avoid`}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Certifications & Accreditations
                   </h2>
                 </div>
-                <div className="flex flex-wrap gap-1.5 text-[11.5px]">
+                <div className={`flex flex-wrap gap-1 ${getFontSizeClass()}`}>
                   {resume.certifications.map((cert, i) => (
-                    <span key={i} className="bg-slate-50 text-slate-800 border border-slate-200 px-2 py-0.5 rounded font-medium">
+                    <span key={i} className={`bg-slate-50 text-slate-800 border border-slate-200 ${is2PageFit ? 'px-1.5 py-0.2' : 'px-2 py-0.5'} rounded font-medium`}>
                       {cert}
                     </span>
                   ))}
@@ -724,21 +770,21 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'executive' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-6 sm:p-10 text-slate-900 font-sans leading-relaxed"
-            style={{ fontSize: '10pt' }}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-6 sm:p-10'} text-slate-900 font-sans leading-relaxed`}
+            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Top Header */}
-            <header className="border-b-2 border-slate-900 pb-3 mb-4">
+            <header className={`border-b-2 border-slate-900 ${is2PageFit ? 'pb-2 mb-2.5' : 'pb-3 mb-4'}`}>
               <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight uppercase">
+                  <h1 className={`${is2PageFit ? 'text-2xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-black text-slate-950 tracking-tight uppercase`}>
                     {resume.fullName}
                   </h1>
-                  <p className="text-xs font-semibold text-slate-700 mt-0.5">
+                  <p className={`${getFontSizeClass()} font-semibold text-slate-700 mt-0.5`}>
                     {resume.title}
                   </p>
                 </div>
-                <div className="text-xs text-slate-600 text-left sm:text-right space-y-0.5 shrink-0">
+                <div className={`${getFontSizeClass()} text-slate-600 text-left sm:text-right space-y-0.5 shrink-0`}>
                   {resume.totalExperience && (
                     <div className="inline-block bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded text-[11px] mb-1">
                       Total Exp: {resume.totalExperience}
@@ -752,9 +798,9 @@ export const ResumePreview: React.FC<Props> = ({
             </header>
 
             {/* Middle: 2-Column Split for Summary, Skills, Certifications & Education */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 mb-5 pb-4 border-b border-slate-200">
+            <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-3 mb-3 pb-2.5' : 'gap-5 mb-5 pb-4'} border-b border-slate-200`}>
               {/* Left Column: Profile Summary, Technical Skills */}
-              <div className="md:col-span-7 space-y-4">
+              <div className={`md:col-span-7 ${is2PageFit ? 'space-y-2' : 'space-y-4'}`}>
                 {resume.summary && (
                   <div>
                     <div className="border-b border-slate-300 pb-1 mb-1.5 flex items-center gap-1.5">
@@ -763,7 +809,7 @@ export const ResumePreview: React.FC<Props> = ({
                         Profile Summary
                       </h2>
                     </div>
-                    <p className="text-xs text-slate-700 leading-relaxed text-justify">
+                    <p className={`${getFontSizeClass()} text-slate-700 leading-relaxed text-justify`}>
                       {resume.summary}
                     </p>
                   </div>
@@ -778,7 +824,7 @@ export const ResumePreview: React.FC<Props> = ({
                         Technical & Analytics Tools
                       </h2>
                     </div>
-                    <div className="space-y-1.5 text-xs">
+                    <div className={`space-y-1 ${getFontSizeClass()}`}>
                       {resume.skills.map(cat => (
                         <div key={cat.id} className="leading-snug">
                           <span className="font-bold text-slate-900">{cat.categoryName}: </span>
@@ -791,7 +837,7 @@ export const ResumePreview: React.FC<Props> = ({
               </div>
 
               {/* Right Column: Areas of Excellence, Certifications, Education */}
-              <div className="md:col-span-5 space-y-4">
+              <div className={`md:col-span-5 ${is2PageFit ? 'space-y-2' : 'space-y-4'}`}>
                 {/* Certifications */}
                 {resume.certifications && resume.certifications.length > 0 && (
                   <div>
@@ -801,7 +847,7 @@ export const ResumePreview: React.FC<Props> = ({
                         Certifications
                       </h2>
                     </div>
-                    <ul className="space-y-1 text-xs text-slate-700">
+                    <ul className={`space-y-0.5 ${getFontSizeClass()} text-slate-700`}>
                       {resume.certifications.map((cert, i) => (
                         <li key={i} className="flex items-start gap-1.5">
                           <span className="text-slate-400 font-bold">•</span>
@@ -821,12 +867,12 @@ export const ResumePreview: React.FC<Props> = ({
                         Education
                       </h2>
                     </div>
-                    <div className="space-y-2 text-xs">
+                    <div className={`space-y-1.5 ${getFontSizeClass()}`}>
                       {resume.education.map(edu => (
                         <div key={edu.id}>
                           <div className="font-bold text-slate-900">{edu.degree}</div>
                           <div className="text-slate-700">{edu.institution}</div>
-                          <div className="text-[11px] text-slate-500 italic">
+                          <div className="text-[10.5px] text-slate-500 italic">
                             {edu.graduationDate} {edu.gpa ? `• GPA: ${edu.gpa}` : ''}
                           </div>
                         </div>
@@ -840,27 +886,27 @@ export const ResumePreview: React.FC<Props> = ({
             {/* Bottom: Chronological Work Experience */}
             {resume.experience && resume.experience.length > 0 && (
               <section>
-                <div className="border-b-2 border-slate-900 pb-1 mb-3 flex items-center gap-1.5">
+                <div className={`border-b-2 border-slate-900 ${is2PageFit ? 'pb-0.5 mb-2' : 'pb-1 mb-3'} flex items-center gap-1.5`}>
                   <Briefcase className="w-3.5 h-3.5 text-slate-600" />
                   <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 leading-normal">
                     Work Experience
                   </h2>
                 </div>
-                <div className="space-y-4">
+                <div className={jobSpacing}>
                   {resume.experience.map(exp => (
                     <div key={exp.id}>
                       <div className="flex items-baseline justify-between bg-slate-50 px-2 py-1 rounded border border-slate-100">
                         <div>
-                          <span className="font-bold text-xs text-slate-950">{exp.role}</span>
-                          <span className="text-xs text-slate-700 font-semibold"> — {exp.company}</span>
+                          <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
+                          <span className={`${getFontSizeClass()} text-slate-700 font-semibold`}> — {exp.company}</span>
                         </div>
-                        <div className="text-xs text-slate-600 font-medium italic shrink-0">
+                        <div className={`${getFontSizeClass()} text-slate-600 font-medium italic shrink-0`}>
                           {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
                           {exp.location ? ` | ${exp.location}` : ''}
                         </div>
                       </div>
 
-                      <ul className="list-disc list-outside ml-4 mt-1.5 space-y-1 text-xs text-slate-800 leading-relaxed">
+                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
                         {exp.bullets.map((b, i) => (
                           <li key={i} className="pl-0.5">{b}</li>
                         ))}
@@ -1254,21 +1300,21 @@ export const ResumePreview: React.FC<Props> = ({
         {(template === 'harvard' || template === 'minimalist') && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 leading-normal ${
+            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
               template === 'harvard' ? 'font-serif' : 'font-sans'
             }`}
-            style={{ fontSize: '10.5pt' }}
+            style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header */}
-            <header className="border-b border-slate-900 pb-3 mb-4 text-center">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight uppercase text-slate-950 mb-1">
+            <header className={`border-b border-slate-900 ${is2PageFit ? 'pb-2 mb-2' : 'pb-3 mb-4'} text-center`}>
+              <h1 className={`${is2PageFit ? 'text-2xl sm:text-2xl' : 'text-2xl sm:text-3xl'} font-bold tracking-tight uppercase text-slate-950 mb-0.5`}>
                 {resume.fullName || 'Your Name'}
               </h1>
-              <p className="text-xs font-semibold text-slate-700 tracking-wide mb-2 uppercase">
+              <p className={`${getFontSizeClass()} font-semibold text-slate-700 tracking-wide mb-1 uppercase`}>
                 {resume.title || 'Professional Title'}
               </p>
 
-              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-slate-600 font-medium">
+              <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-600 font-medium`}>
                 {resume.totalExperience && <span className="font-bold text-slate-900">[{resume.totalExperience}]</span>}
                 {resume.email && <span>{resume.email}</span>}
                 {resume.phone && <span>• {resume.phone}</span>}
@@ -1279,13 +1325,13 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Professional Summary */}
             {resume.summary && (
-              <section className="mb-4">
-                <div className="border-b border-slate-400 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Professional Summary
                   </h2>
                 </div>
-                <p className="text-xs text-slate-800 leading-relaxed text-justify">
+                <p className={`${getFontSizeClass()} text-slate-800 leading-relaxed text-justify`}>
                   {resume.summary}
                 </p>
               </section>
@@ -1293,13 +1339,13 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Technical Skills */}
             {resume.skills && resume.skills.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b border-slate-400 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Technical Skills & Proficiencies
                   </h2>
                 </div>
-                <div className="space-y-1 text-xs">
+                <div className={`space-y-0.5 ${getFontSizeClass()}`}>
                   {resume.skills.map((cat) => (
                     <div key={cat.id} className="leading-snug">
                       <span className="font-bold text-slate-900">{cat.categoryName}: </span>
@@ -1312,27 +1358,27 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Work Experience */}
             {resume.experience && resume.experience.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b border-slate-400 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Work Experience
                   </h2>
                 </div>
-                <div className="space-y-3.5">
+                <div className={jobSpacing}>
                   {resume.experience.map((exp) => (
                     <div key={exp.id}>
                       <div className="flex items-baseline justify-between">
                         <div>
-                          <span className="font-bold text-xs text-slate-950">{exp.role}</span>
-                          <span className="text-xs text-slate-800 font-semibold"> | {exp.company}</span>
+                          <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
+                          <span className={`${getFontSizeClass()} text-slate-800 font-semibold`}> | {exp.company}</span>
                         </div>
-                        <div className="text-xs text-slate-600 font-medium italic shrink-0">
+                        <div className={`${getFontSizeClass()} text-slate-600 font-medium italic shrink-0`}>
                           {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
                           {exp.location ? ` | ${exp.location}` : ''}
                         </div>
                       </div>
 
-                      <ul className="list-disc list-outside ml-4 mt-1 space-y-1 text-xs text-slate-800 leading-normal">
+                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
                         {exp.bullets.map((b, i) => (
                           <li key={i} className="pl-0.5">{b}</li>
                         ))}
@@ -1345,15 +1391,15 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Education */}
             {resume.education && resume.education.length > 0 && (
-              <section className="mb-4">
-                <div className="border-b border-slate-400 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={sectionMargin}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Education
                   </h2>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {resume.education.map((edu) => (
-                    <div key={edu.id} className="flex items-baseline justify-between text-xs">
+                    <div key={edu.id} className={`flex items-baseline justify-between ${getFontSizeClass()}`}>
                       <div>
                         <span className="font-bold text-slate-950">{edu.degree}</span>
                         <span className="text-slate-800"> – {edu.institution}</span>
@@ -1370,13 +1416,13 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Certifications */}
             {resume.certifications && resume.certifications.length > 0 && (
-              <section className="mb-3">
-                <div className="border-b border-slate-400 pb-1 mb-2">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-950 leading-normal">
+              <section className={`${sectionMargin} break-inside-avoid`}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Certifications & Credentials
                   </h2>
                 </div>
-                <div className="text-xs text-slate-800">
+                <div className={`${getFontSizeClass()} text-slate-800`}>
                   {resume.certifications.join(' • ')}
                 </div>
               </section>

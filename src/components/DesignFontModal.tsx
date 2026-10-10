@@ -183,22 +183,42 @@ export const DesignFontModal: React.FC<Props> = ({
             </div>
 
             {/* Quick 2-Page Fit Preset */}
-            <div className="mt-3 p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-center justify-between">
+            <div className={`mt-3 p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+              design.fitTwoPages
+                ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-500'
+                : 'bg-indigo-50/70 border-indigo-200/80'
+            }`}>
               <div>
-                <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-indigo-600" />
-                  Auto-Fit to Exactly 2 Pages
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Check className={`w-3.5 h-3.5 ${design.fitTwoPages ? 'text-emerald-600' : 'text-indigo-600'}`} />
+                  {design.fitTwoPages ? '✓ 2-Page Fit Mode Active' : 'Auto-Fit to Exactly 2 Pages'}
                 </span>
-                <p className="text-[11px] text-indigo-800/80 mt-0.5">
-                  Automatically calibrates font size and compact spacing so your complete career history ends cleanly on Page 2.
+                <p className="text-[11px] text-slate-600 mt-0.5">
+                  Automatically compacts margins, font size (11.5px), and spacing so your complete career history ends on Page 2.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setDesign(d => ({ ...d, fontSize: 'compact', lineSpacing: 'tight', fitTwoPages: true }))}
-                className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-2xs transition-all shrink-0 cursor-pointer"
+                onClick={() => {
+                  const newDesign: ResumeDesignSettings = {
+                    ...design,
+                    fontSize: 'compact',
+                    lineSpacing: 'tight',
+                    fitTwoPages: true
+                  };
+                  setDesign(newDesign);
+                  onChange({
+                    ...resume,
+                    design: newDesign
+                  });
+                }}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg shadow-2xs transition-all shrink-0 cursor-pointer ${
+                  design.fitTwoPages
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-500'
+                }`}
               >
-                Apply 2-Page Fit
+                {design.fitTwoPages ? 'Applied' : 'Apply 2-Page Fit'}
               </button>
             </div>
           </div>

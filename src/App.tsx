@@ -354,6 +354,35 @@ export function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+            {/* Quick 2-Page Fit Toggle Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const currentFit = Boolean(resume.design?.fitTwoPages || resume.design?.fontSize === 'compact');
+                const nextFit = !currentFit;
+                setResume({
+                  ...resume,
+                  design: {
+                    ...resume.design,
+                    fitTwoPages: nextFit,
+                    fontSize: nextFit ? 'compact' : 'normal',
+                    lineSpacing: nextFit ? 'tight' : 'normal',
+                    fontFamily: resume.design?.fontFamily || 'roboto',
+                    primaryColor: resume.design?.primaryColor || '#0f172a',
+                    showPhoto: resume.design?.showPhoto ?? false
+                  }
+                });
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer border ${
+                (resume.design?.fitTwoPages || resume.design?.fontSize === 'compact')
+                  ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs ring-1 ring-emerald-500'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border-emerald-300 shadow-2xs'
+              }`}
+              title="Auto-compress margins, padding, and typography to fit resume cleanly in 2 pages"
+            >
+              <span>⚡ {(resume.design?.fitTwoPages || resume.design?.fontSize === 'compact') ? '2-Page Fit: ON' : '2-Page Fit'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsRearrangeOpen(true)}
@@ -445,6 +474,7 @@ export function App() {
                 onOpenPdfPreview={() => setIsPdfPreviewOpen(true)}
                 onOpenRearrange={() => setIsRearrangeOpen(true)}
                 onOpenDesign={() => setIsDesignOpen(true)}
+                onResumeChange={setResume}
                 isDownloadingPdf={isDownloadingPdf}
               />
             </div>
