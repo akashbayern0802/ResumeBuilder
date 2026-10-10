@@ -91,11 +91,11 @@ export const ResumePreview: React.FC<Props> = ({
   };
 
   // Dynamic layout tokens for 2-page fit compaction
-  const containerPadding = is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-12';
-  const headerMargin = is2PageFit ? 'border-b-2 pb-2 mb-2.5' : 'border-b-2 pb-3.5 mb-4';
-  const sectionMargin = is2PageFit ? 'mb-2 sm:mb-2.5' : 'mb-4';
-  const jobSpacing = is2PageFit ? 'space-y-2' : 'space-y-4';
-  const bulletSpacing = is2PageFit ? 'mt-1 space-y-0.5' : 'mt-1.5 space-y-1';
+  const containerPadding = is2PageFit ? 'p-4 sm:p-6' : 'p-8 sm:p-12';
+  const headerMargin = is2PageFit ? 'border-b-2 pb-1.5 mb-2' : 'border-b-2 pb-3.5 mb-4';
+  const sectionMargin = is2PageFit ? 'mb-2' : 'mb-4';
+  const jobSpacing = is2PageFit ? 'space-y-1.5' : 'space-y-4';
+  const bulletSpacing = is2PageFit ? 'mt-0.5 space-y-0.5' : 'mt-1.5 space-y-1';
 
   const primaryColor = design?.primaryColor || '#0f172a';
   const showPhoto = Boolean(design?.showPhoto && resume.photoUrl);
@@ -206,7 +206,8 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'naukri' && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Authority & Immediate Recruiter Metadata */}
@@ -429,7 +430,8 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'double_column' && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Full-Width Clean Double-Border Header */}
@@ -637,7 +639,8 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'double_line' && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-11'} text-slate-900 leading-normal`}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-11'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Double-Line Top Authority Header */}
@@ -770,7 +773,8 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'executive' && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-6 sm:p-10'} text-slate-900 font-sans leading-relaxed`}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Top Header */}
@@ -895,7 +899,7 @@ export const ResumePreview: React.FC<Props> = ({
                 <div className={jobSpacing}>
                   {resume.experience.map(exp => (
                     <div key={exp.id}>
-                      <div className="flex items-baseline justify-between bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                      <div className={`flex items-baseline justify-between bg-slate-50 ${is2PageFit ? 'px-2 py-0.5' : 'px-2 py-1'} rounded border border-slate-100`}>
                         <div>
                           <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
                           <span className={`${getFontSizeClass()} text-slate-700 font-semibold`}> — {exp.company}</span>
@@ -906,7 +910,7 @@ export const ResumePreview: React.FC<Props> = ({
                         </div>
                       </div>
 
-                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
+                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-snug`}>
                         {exp.bullets.map((b, i) => (
                           <li key={i} className="pl-0.5">{b}</li>
                         ))}
@@ -925,8 +929,9 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'modern' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 font-sans leading-normal"
-            style={{ fontSize: '10.5pt' }}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header with modern indigo pill */}
             <header className="pb-4 mb-5 border-b-2 border-indigo-600">
@@ -1057,8 +1062,9 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'wallstreet' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-6 sm:p-10 text-slate-950 font-serif leading-tight"
-            style={{ fontSize: '10pt' }}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
+            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Header: Centered, High Density */}
             <header className="text-center pb-2 mb-3 border-b-2 border-slate-950">
@@ -1175,8 +1181,9 @@ export const ResumePreview: React.FC<Props> = ({
         {template === 'tech' && (
           <div
             id="resume-printable-area"
-            className="resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] p-8 sm:p-12 text-slate-900 font-sans leading-normal"
-            style={{ fontSize: '10pt' }}
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Tech Header */}
             <header className="border-b border-slate-200 pb-4 mb-5">
@@ -1300,7 +1307,8 @@ export const ResumePreview: React.FC<Props> = ({
         {(template === 'harvard' || template === 'minimalist') && (
           <div
             id="resume-printable-area"
-            className={`resume-paper bg-white shadow-xl rounded-sm w-full max-w-[850px] min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
+            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
               template === 'harvard' ? 'font-serif' : 'font-sans'
             }`}
             style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}

@@ -93,17 +93,21 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     throw new Error(`Element with id ${elementId} not found`);
   }
 
-  // 1. Measure positions of all atomic blocks that should avoid being split
+  const isTwoPageFit = element.getAttribute('data-fit-two-pages') === 'true' ||
+    element.classList.contains('fit-two-pages');
+
+  // 1. Measure positions of only small atomic items (under 75px) to prevent premature page breaks
   const containerRect = element.getBoundingClientRect();
   const avoidElements: { top: number; bottom: number }[] = [];
 
-  // Query candidate atomic elements: bullet points, headers, job items, and section blocks
-  const candidates = element.querySelectorAll('li, h1, h2, h3, header, .resume-experience-item, section > div > div');
+  const candidates = element.querySelectorAll('li, h1, h2, h3, .break-inside-avoid');
   candidates.forEach(child => {
     const rect = child.getBoundingClientRect();
     const top = rect.top - containerRect.top;
     const bottom = rect.bottom - containerRect.top;
-    if (bottom - top > 8) {
+    const height = bottom - top;
+    // Strictly avoid atomic items (under 75px) so large 200px+ containers never cause early page ejection
+    if (height >= 8 && height <= 75) {
       avoidElements.push({ top, bottom });
     }
   });
@@ -115,20 +119,9 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     logging: false,
     backgroundColor: '#ffffff',
     scrollX: 0,
-    scrollY: -window.scrollY
+    scrollY: 0,
+    windowWidth: 1200
   });
-
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) {
-    throw new Error('Could not obtain canvas 2D rendering context');
-  }
-
-  // 3. Map DOM avoid elements to canvas coordinates
-  const scaleY = canvas.height / element.scrollHeight;
-  const canvasAvoidZones = avoidElements.map(e => ({
-    top: Math.round(e.top * scaleY),
-    bottom: Math.round(e.bottom * scaleY)
-  }));
 
   // Standard A4 dimensions
   const A4_WIDTH_MM = 210;
@@ -136,33 +129,86 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
   const A4_ASPECT_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
   const idealPageHeightPx = Math.round(canvas.width * A4_ASPECT_RATIO);
 
+  // 3. Auto-fit to 2 pages if requested and within reasonable stretch (up to 2.35 pages)
+  let activeCanvas = canvas;
+  if (isTwoPageFit && canvas.height > (2 * idealPageHeightPx) && canvas.height <= Math.round(2.35 * idealPageHeightPx)) {
+    const targetHeight = Math.round(2 * idealPageHeightPx - 20);
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = canvas.width;
+    scaledCanvas.height = targetHeight;
+    const sCtx = scaledCanvas.getContext('2d');
+    if (sCtx) {
+      sCtx.fillStyle = '#ffffff';
+      sCtx.fillRect(0, 0, scaledCanvas.width, targetHeight);
+      sCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, targetHeight);
+      activeCanvas = scaledCanvas;
+    }
+  }
+
+  const ctx = activeCanvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    throw new Error('Could not obtain canvas 2D rendering context');
+  }
+
+  // Map DOM avoid elements to canvas coordinates
+  const scaleY = activeCanvas.height / element.scrollHeight;
+  const canvasAvoidZones = avoidElements.map(e => ({
+    top: Math.round(e.top * scaleY),
+    bottom: Math.round(e.bottom * scaleY)
+  }));
+
   // 4. Calculate smart page slices
-  let currentStartY = 0;
   const pageSlices: { startY: number; endY: number }[] = [];
 
-  while (currentStartY < canvas.height) {
-    const remainingHeight = canvas.height - currentStartY;
+  // SPECIAL 2-PAGE FIT GUARANTEE:
+  // If 2-page fit mode is active and total height fits within 2 A4 pages:
+  if (isTwoPageFit && activeCanvas.height <= (2 * idealPageHeightPx + 10)) {
+    if (activeCanvas.height <= idealPageHeightPx) {
+      // Entire content fits in a single page
+      pageSlices.push({ startY: 0, endY: activeCanvas.height });
+    } else {
+      // Fits in 2 pages: pick an optimal, balanced cut between Page 1 and Page 2
+      const minCutY = Math.max(100, activeCanvas.height - idealPageHeightPx + 10);
+      const maxCutY = idealPageHeightPx - 10;
+      const midCutY = Math.round(activeCanvas.height / 2);
+      let targetCutY = Math.min(maxCutY, Math.max(minCutY, midCutY));
 
-    if (remainingHeight <= idealPageHeightPx) {
-      pageSlices.push({ startY: currentStartY, endY: canvas.height });
-      break;
+      // Scan within [minCutY, maxCutY] for the best whitespace gap
+      targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, minCutY, 140);
+
+      // Ensure cut is strictly bounded so neither page overflows A4
+      targetCutY = Math.min(maxCutY, Math.max(minCutY, targetCutY));
+
+      pageSlices.push({ startY: 0, endY: targetCutY });
+      pageSlices.push({ startY: targetCutY, endY: activeCanvas.height });
     }
+  } else {
+    // Standard multi-page slicer
+    let currentStartY = 0;
+    while (currentStartY < activeCanvas.height) {
+      const remainingHeight = activeCanvas.height - currentStartY;
 
-    const idealCutY = currentStartY + idealPageHeightPx;
-    let targetCutY = idealCutY;
+      if (remainingHeight <= idealPageHeightPx) {
+        pageSlices.push({ startY: currentStartY, endY: activeCanvas.height });
+        break;
+      }
 
-    const straddling = canvasAvoidZones.find(
-      zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.40)
-    );
+      const idealCutY = currentStartY + idealPageHeightPx;
+      let targetCutY = idealCutY;
 
-    if (straddling) {
-      targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.5), straddling.top - 4);
+      const straddling = canvasAvoidZones.find(
+        zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.20)
+      );
+
+      if (straddling) {
+        targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.6), straddling.top - 4);
+      }
+
+      targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, currentStartY, 140);
+
+      pageSlices.push({ startY: currentStartY, endY: targetCutY });
+      currentStartY = targetCutY;
     }
-
-    targetCutY = findNearestWhitespaceRow(ctx, canvas.width, targetCutY, currentStartY, 160);
-
-    pageSlices.push({ startY: currentStartY, endY: targetCutY });
-    currentStartY = targetCutY;
   }
 
   // 5. Build multi-page A4 PDF and collect page image data URLs
@@ -179,7 +225,7 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     const sliceHeightPx = slice.endY - slice.startY;
 
     const pageCanvas = document.createElement('canvas');
-    pageCanvas.width = canvas.width;
+    pageCanvas.width = activeCanvas.width;
     pageCanvas.height = idealPageHeightPx;
     const pageCtx = pageCanvas.getContext('2d');
 
@@ -187,9 +233,9 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       pageCtx.fillStyle = '#ffffff';
       pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
       pageCtx.drawImage(
-        canvas,
-        0, slice.startY, canvas.width, sliceHeightPx,
-        0, 0, canvas.width, sliceHeightPx
+        activeCanvas,
+        0, slice.startY, activeCanvas.width, sliceHeightPx,
+        0, 0, activeCanvas.width, sliceHeightPx
       );
     }
 
