@@ -503,6 +503,8 @@ export const Header: React.FC<Props> = ({
                 className="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium shadow-2xs"
               >
                 <option value="naukri">🇮🇳 Naukri & Indian Corporate ATS</option>
+                <option value="double_column">📐 Double-Column Executive (2-Page Fit)</option>
+                <option value="double_line">📑 Double-Line Corporate ATS (2-Page Fit)</option>
                 <option value="executive">👔 Executive Two-Column (Consulting)</option>
                 <option value="harvard">🏛️ Harvard ATS (Classic)</option>
                 <option value="modern">💼 Modern Professional</option>

@@ -181,6 +181,26 @@ export const DesignFontModal: React.FC<Props> = ({
                 </button>
               ))}
             </div>
+
+            {/* Quick 2-Page Fit Preset */}
+            <div className="mt-3 p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-indigo-600" />
+                  Auto-Fit to Exactly 2 Pages
+                </span>
+                <p className="text-[11px] text-indigo-800/80 mt-0.5">
+                  Automatically calibrates font size and compact spacing so your complete career history ends cleanly on Page 2.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDesign(d => ({ ...d, fontSize: 'compact', lineSpacing: 'tight', fitTwoPages: true }))}
+                className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-2xs transition-all shrink-0 cursor-pointer"
+              >
+                Apply 2-Page Fit
+              </button>
+            </div>
           </div>
 
           {/* 3. Primary Accent Color */}

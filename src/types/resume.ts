@@ -42,6 +42,7 @@ export interface ResumeDesignSettings {
   lineSpacing: 'tight' | 'normal' | 'relaxed';
   primaryColor?: string;
   showPhoto?: boolean;
+  fitTwoPages?: boolean;
 }
 
 export interface ResumeData {
@@ -136,5 +137,14 @@ export interface LLMConfig {
   project?: string; // For Bedrock Mantle OpenAI-Project header (defaults to "default")
 }
 
-export type ResumeTemplate = 'naukri' | 'harvard' | 'modern' | 'executive' | 'wallstreet' | 'tech' | 'minimalist';
+export type ResumeTemplate =
+  | 'naukri'
+  | 'double_column'
+  | 'double_line'
+  | 'executive'
+  | 'harvard'
+  | 'modern'
+  | 'wallstreet'
+  | 'tech'
+  | 'minimalist';
 
