@@ -92,25 +92,29 @@ export const BulletList: React.FC<BulletListProps> = ({
   if (valid.length === 0) return null;
 
   return (
-    <div className={`${bulletSpacing} ${fontSizeClass} ${className}`}>
+    <ul
+      className={`${bulletSpacing} ${fontSizeClass} ${className}`}
+      style={{ listStyle: 'none', margin: 0, padding: 0 }}
+    >
       {valid.map((b, i) => (
-        <div
+        <li
           key={i}
-          className={`flex items-baseline gap-1.5 text-slate-800 ${textClassName}`}
-          style={{ lineHeight: '1.45' }}
+          className={`text-slate-800 ${textClassName} ${bulletClassName}`}
+          style={{
+            paddingLeft: '1.1em',
+            textIndent: '-1.1em',
+            lineHeight: '1.45',
+            wordBreak: 'break-word'
+          }}
         >
-          <span
-            className={`select-none text-slate-700 font-bold shrink-0 ${bulletClassName}`}
-            style={{ fontSize: '0.6em', lineHeight: '1.45', marginTop: '0.2em' }}
-          >
-            ●
-          </span>
-          <span className="flex-1 text-left" style={{ wordBreak: 'break-word' }}>{b}</span>
-        </div>
+          <span style={{ fontWeight: 700, marginRight: '0.35em', color: '#374151' }}>•</span>
+          {b}
+        </li>
       ))}
-    </div>
+    </ul>
   );
 };
+
 
 interface Props {
   resume: ResumeData;
