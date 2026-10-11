@@ -436,22 +436,23 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         bullets: []
       };
     } else if (currentExp) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-
-      // Match bullet glyphs (•, -, *, ▪, ▸, –, —, \uF0B7, \u25CF, etc.) or numbered lists (1., 1))
-      const bulletMatch = trimmed.match(/^([•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6]|\d+[.)])\s*(.*)$/);
-      if (bulletMatch) {
-        const bulletText = bulletMatch[2].trim();
-        if (bulletText.length > 0) {
-          currentExp.bullets.push(bulletText);
+      // Detect lines that are bullets using all common unicode bullet chars and numbered lists
+      const bulletPattern = /^[\s\t]*([•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6]|\d+[.)]\s)/;
+      if (bulletPattern.test(line)) {
+        const cleanBullet = line.replace(/^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6][\s\t]*|^[\s\t]*\d+[.)]\s+/, '').trim();
+        if (cleanBullet.length > 5) {
+          currentExp.bullets.push(cleanBullet);
         }
       } else if (currentExp.bullets.length > 0) {
-        // Wrapped continuation line belonging to previous bullet point
-        currentExp.bullets[currentExp.bullets.length - 1] += ' ' + trimmed;
-      } else if (trimmed.length > 10 && !trimmed.toLowerCase().includes('responsibilities:')) {
-        // First bullet point even if bullet character was omitted in PDF text stream
-        currentExp.bullets.push(trimmed);
+        // Continuation lines: only append if line looks like a sentence continuation
+        // (doesn't start with a capital noun/company-like pattern and is not a date)
+        const looksLikeContinuation = !/^[A-Z][a-z]+\s+[A-Z]/.test(line) &&
+          !/^\d{4}/.test(line) &&
+          !/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(line) &&
+          line.length < 200;
+        if (looksLikeContinuation) {
+          currentExp.bullets[currentExp.bullets.length - 1] += ' ' + line;
+        }
       }
     }
   }
@@ -570,14 +571,30 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
 
     if (curAch) achievements.push(curAch);
 
-    // Populate projects / deliverables list with key career achievements
+    // Populate projects list
     resume.projects = achievements.map((ach, idx) => ({
       id: `proj-${Date.now()}-${idx}`,
-      name: ach.company ? `${ach.company} Impact & Key Highlight` : `Career Milestone ${idx + 1}`,
+      name: `${ach.company} Milestone`,
       description: ach.text,
       technologies: [],
       bullets: [ach.text]
     }));
+
+    // Attach achievements to matching company experience bullets as key highlights
+    if (resume.experience.length > 0) {
+      resume.experience = resume.experience.map(exp => {
+        const matched = achievements.filter(ach =>
+          ach.company && exp.company.toLowerCase().includes(ach.company.toLowerCase())
+        );
+        if (matched.length > 0) {
+          return {
+            ...exp,
+            bullets: [...exp.bullets, ...matched.map(m => `Key Achievement: ${m.text}`)]
+          };
+        }
+        return exp;
+      });
+    }
   }
 
   return resume;

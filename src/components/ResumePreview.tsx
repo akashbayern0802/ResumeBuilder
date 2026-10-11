@@ -94,9 +94,18 @@ export const BulletList: React.FC<BulletListProps> = ({
   return (
     <div className={`${bulletSpacing} ${fontSizeClass} ${className}`}>
       {valid.map((b, i) => (
-        <div key={i} className="flex items-start gap-2 break-inside-avoid text-slate-800">
-          <span className={`select-none text-slate-700 font-bold shrink-0 leading-[1.35] text-[10px] sm:text-[11px] ${bulletClassName}`}>•</span>
-          <span className={`flex-1 leading-normal text-slate-800 text-left ${textClassName}`}>{b}</span>
+        <div
+          key={i}
+          className={`flex items-baseline gap-1.5 text-slate-800 ${textClassName}`}
+          style={{ lineHeight: '1.45' }}
+        >
+          <span
+            className={`select-none text-slate-700 font-bold shrink-0 ${bulletClassName}`}
+            style={{ fontSize: '0.6em', lineHeight: '1.45', marginTop: '0.2em' }}
+          >
+            ●
+          </span>
+          <span className="flex-1 text-left" style={{ wordBreak: 'break-word' }}>{b}</span>
         </div>
       ))}
     </div>
@@ -596,15 +605,13 @@ export const ResumePreview: React.FC<Props> = ({
                 <>
                   {/* SHEET 1 */}
                   <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
                     style={{ fontFamily: getFontFamily() }}
                   >
-                    <div>
-                      {renderNaukriHeader(false)}
-                      {renderNaukriSection('summary')}
-                      {renderNaukriSection('skills')}
-                      {renderNaukriSection('experience', partition.p1Exp)}
-                    </div>
+                    {renderNaukriHeader(false)}
+                    {renderNaukriSection('summary')}
+                    {renderNaukriSection('skills')}
+                    {renderNaukriSection('experience', partition.p1Exp)}
                     <SheetFooter pageText="Page 1 of 2" />
                   </div>
 
@@ -613,32 +620,28 @@ export const ResumePreview: React.FC<Props> = ({
 
                   {/* SHEET 2 */}
                   <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
                     style={{ fontFamily: getFontFamily() }}
                   >
-                    <div>
-                      {renderNaukriHeader(true)}
-                      {renderNaukriSection('experience', partition.p2Exp)}
-                      {renderNaukriSection('education')}
-                      {renderNaukriSection('certifications')}
-                      {renderNaukriSection('projects')}
-                    </div>
+                    {renderNaukriHeader(true)}
+                    {renderNaukriSection('experience', partition.p2Exp)}
+                    {renderNaukriSection('education')}
+                    {renderNaukriSection('certifications')}
+                    {renderNaukriSection('projects')}
                     <SheetFooter pageText="Page 2 of 2" />
                   </div>
                 </>
               ) : (
                 /* SINGLE SHEET */
                 <div
-                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
                   style={{ fontFamily: getFontFamily() }}
                 >
-                  <div>
-                    {renderNaukriHeader(false)}
-                    {(resume.sectionOrder && resume.sectionOrder.length > 0
-                      ? resume.sectionOrder
-                      : (['summary', 'skills', 'experience', 'education', 'certifications', 'projects'] as ResumeSectionId[])
-                    ).map((secId) => renderNaukriSection(secId))}
-                  </div>
+                  {renderNaukriHeader(false)}
+                  {(resume.sectionOrder && resume.sectionOrder.length > 0
+                    ? resume.sectionOrder
+                    : (['summary', 'skills', 'experience', 'education', 'certifications', 'projects'] as ResumeSectionId[])
+                  ).map((secId) => renderNaukriSection(secId))}
                   <SheetFooter pageText="Page 1 of 1" />
                 </div>
               )}
@@ -850,68 +853,9 @@ export const ResumePreview: React.FC<Props> = ({
                 <>
                   {/* SHEET 1 */}
                   <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
                     style={{ fontFamily: getFontFamily() }}
                   >
-                    <div>
-                      {renderDoubleColHeader(false)}
-                      <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
-                        <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                          {resume.summary && (
-                            <div className="break-inside-avoid">
-                              <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
-                                <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                                  <FileText className="w-3.5 h-3.5 text-slate-700" />
-                                  Executive Profile
-                                </h2>
-                              </div>
-                              <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
-                                {resume.summary}
-                              </p>
-                            </div>
-                          )}
-                          {renderSkillsSidebar()}
-                        </div>
-                        <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                          {renderExpTrack(partition.p1Exp)}
-                        </div>
-                      </div>
-                    </div>
-                    <SheetFooter pageText="Page 1 of 2" />
-                  </div>
-
-                  {/* VISUAL A4 SHEET BOUNDARY */}
-                  <SheetBoundaryDivider pageNumber={2} />
-
-                  {/* SHEET 2 */}
-                  <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
-                    style={{ fontFamily: getFontFamily() }}
-                  >
-                    <div>
-                      {renderDoubleColHeader(true)}
-                      <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
-                        <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                          {renderEducationSidebar()}
-                          {renderCertificationsSidebar()}
-                          {renderMetadataSidebar()}
-                        </div>
-                        <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                          {renderExpTrack(partition.p2Exp)}
-                          {renderProjectsTrack()}
-                        </div>
-                      </div>
-                    </div>
-                    <SheetFooter pageText="Page 2 of 2" />
-                  </div>
-                </>
-              ) : (
-                /* SINGLE SHEET */
-                <div
-                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
-                  style={{ fontFamily: getFontFamily() }}
-                >
-                  <div>
                     {renderDoubleColHeader(false)}
                     <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
                       <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
@@ -929,14 +873,67 @@ export const ResumePreview: React.FC<Props> = ({
                           </div>
                         )}
                         {renderSkillsSidebar()}
+                      </div>
+                      <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                        {renderExpTrack(partition.p1Exp)}
+                      </div>
+                    </div>
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    {renderDoubleColHeader(true)}
+                    <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
+                      <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
                         {renderEducationSidebar()}
                         {renderCertificationsSidebar()}
                         {renderMetadataSidebar()}
                       </div>
                       <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                        {renderExpTrack(resume.experience)}
+                        {renderExpTrack(partition.p2Exp)}
                         {renderProjectsTrack()}
                       </div>
+                    </div>
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  {renderDoubleColHeader(false)}
+                  <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
+                    <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                      {resume.summary && (
+                        <div className="break-inside-avoid">
+                          <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                            <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                              <FileText className="w-3.5 h-3.5 text-slate-700" />
+                              Executive Profile
+                            </h2>
+                          </div>
+                          <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
+                            {resume.summary}
+                          </p>
+                        </div>
+                      )}
+                      {renderSkillsSidebar()}
+                      {renderEducationSidebar()}
+                      {renderCertificationsSidebar()}
+                      {renderMetadataSidebar()}
+                    </div>
+                    <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                      {renderExpTrack(resume.experience)}
+                      {renderProjectsTrack()}
                     </div>
                   </div>
                   <SheetFooter pageText="Page 1 of 1" />
@@ -1128,15 +1125,13 @@ export const ResumePreview: React.FC<Props> = ({
                 <>
                   {/* SHEET 1 */}
                   <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
                     style={{ fontFamily: getFontFamily() }}
                   >
-                    <div>
-                      {renderDoubleLineHeader(false)}
-                      {renderSummary()}
-                      {renderSkills()}
-                      {renderExperience(partition.p1Exp)}
-                    </div>
+                    {renderDoubleLineHeader(false)}
+                    {renderSummary()}
+                    {renderSkills()}
+                    {renderExperience(partition.p1Exp)}
                     <SheetFooter pageText="Page 1 of 2" />
                   </div>
 
@@ -1145,34 +1140,30 @@ export const ResumePreview: React.FC<Props> = ({
 
                   {/* SHEET 2 */}
                   <div
-                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
                     style={{ fontFamily: getFontFamily() }}
                   >
-                    <div>
-                      {renderDoubleLineHeader(true)}
-                      {renderExperience(partition.p2Exp)}
-                      {renderEducation()}
-                      {renderCertifications()}
-                      {renderProjects()}
-                    </div>
+                    {renderDoubleLineHeader(true)}
+                    {renderExperience(partition.p2Exp)}
+                    {renderEducation()}
+                    {renderCertifications()}
+                    {renderProjects()}
                     <SheetFooter pageText="Page 2 of 2" />
                   </div>
                 </>
               ) : (
                 /* SINGLE SHEET */
                 <div
-                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
                   style={{ fontFamily: getFontFamily() }}
                 >
-                  <div>
-                    {renderDoubleLineHeader(false)}
-                    {renderSummary()}
-                    {renderSkills()}
-                    {renderExperience(resume.experience)}
-                    {renderEducation()}
-                    {renderCertifications()}
-                    {renderProjects()}
-                  </div>
+                  {renderDoubleLineHeader(false)}
+                  {renderSummary()}
+                  {renderSkills()}
+                  {renderExperience(resume.experience)}
+                  {renderEducation()}
+                  {renderCertifications()}
+                  {renderProjects()}
                   <SheetFooter pageText="Page 1 of 1" />
                 </div>
               )}
