@@ -502,6 +502,8 @@ export const Header: React.FC<Props> = ({
                 onChange={(e) => onTemplateChange(e.target.value as ResumeTemplate)}
                 className="text-xs bg-white border border-slate-200 text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary-500 font-medium shadow-2xs"
               >
+                <option value="enhancv_timeline">✨ Enhancv Executive Timeline (2-Page)</option>
+                <option value="graphical_metric">📊 Graphical Infographic & KPI Grid (2-Page)</option>
                 <option value="naukri">🇮🇳 Naukri & Indian Corporate ATS</option>
                 <option value="double_column">📐 Double-Column Executive (2-Page Fit)</option>
                 <option value="double_line">📑 Double-Line Corporate ATS (2-Page Fit)</option>

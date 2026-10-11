@@ -138,6 +138,8 @@ export interface LLMConfig {
 }
 
 export type ResumeTemplate =
+  | 'enhancv_timeline'
+  | 'graphical_metric'
   | 'naukri'
   | 'double_column'
   | 'double_line'
@@ -147,4 +149,5 @@ export type ResumeTemplate =
   | 'wallstreet'
   | 'tech'
   | 'minimalist';
+
 

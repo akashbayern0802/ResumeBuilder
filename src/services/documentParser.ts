@@ -436,23 +436,14 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         bullets: []
       };
     } else if (currentExp) {
-      // Detect lines that are bullets using all common unicode bullet chars and numbered lists
-      const bulletPattern = /^[\s\t]*([•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6]|\d+[.)]\s)/;
-      if (bulletPattern.test(line)) {
-        const cleanBullet = line.replace(/^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6][\s\t]*|^[\s\t]*\d+[.)]\s+/, '').trim();
+      if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
+        const cleanBullet = line.replace(/^[•\-*]\s*/, '').trim();
         if (cleanBullet.length > 5) {
           currentExp.bullets.push(cleanBullet);
         }
       } else if (currentExp.bullets.length > 0) {
-        // Continuation lines: only append if line looks like a sentence continuation
-        // (doesn't start with a capital noun/company-like pattern and is not a date)
-        const looksLikeContinuation = !/^[A-Z][a-z]+\s+[A-Z]/.test(line) &&
-          !/^\d{4}/.test(line) &&
-          !/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i.test(line) &&
-          line.length < 200;
-        if (looksLikeContinuation) {
-          currentExp.bullets[currentExp.bullets.length - 1] += ' ' + line;
-        }
+        // Wrapped bullet line from previous item
+        currentExp.bullets[currentExp.bullets.length - 1] += ' ' + line;
       }
     }
   }

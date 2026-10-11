@@ -11,8 +11,26 @@ import {
   Palette,
   ArrowUpDown,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  Mail,
+  Phone,
+  MapPin,
+  Trophy,
+  BarChart3,
+  TrendingUp,
+  Gem,
+  Rocket,
+  Sparkles,
+  CheckCircle2,
+  Calendar,
+  Layers
 } from 'lucide-react';
+
+const LinkedInIcon = ({ className = "w-3 h-3 text-amber-700 shrink-0" }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.74a1.59 1.59 0 0 0-1.6 1.6 1.6 1.6 0 0 0 1.6 1.6 1.6 1.6 0 0 0 1.6-1.6 1.59 1.59 0 0 0-1.6-1.6Z" />
+  </svg>
+);
 
 const cleanBulletText = (text: string) => {
   if (!text) return '';
@@ -147,6 +165,8 @@ export const ResumePreview: React.FC<Props> = ({
   });
 
   const templatesList: { id: ResumeTemplate; label: string; icon: string }[] = [
+    { id: 'enhancv_timeline', label: 'Enhancv Timeline', icon: '✨' },
+    { id: 'graphical_metric', label: 'Graphical KPI Grid', icon: '📊' },
     { id: 'naukri', label: 'Naukri & Indian ATS', icon: '🇮🇳' },
     { id: 'double_column', label: 'Double-Column (2-Page)', icon: '📐' },
     { id: 'double_line', label: 'Double-Line ATS (2-Page)', icon: '📑' },
@@ -376,6 +396,587 @@ export const ResumePreview: React.FC<Props> = ({
             marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * (partition.isMultiPage ? 2350 : 1150)}px` : undefined
           }}
         >
+        {/* ============================================================ */}
+        {/* FORMAT: ENHANCV EXECUTIVE TIMELINE (MATCHING USER PDF)       */}
+        {/* ============================================================ */}
+        {template === 'enhancv_timeline' && (() => {
+          const renderEnhancvHeader = (isContinuation = false) => {
+            if (isContinuation) {
+              return (
+                <div className={`border-b-2 border-slate-900 ${is2PageFit ? 'pb-1 mb-2' : 'pb-1.5 mb-2.5'} flex justify-between items-baseline text-xs text-slate-600`}>
+                  <div>
+                    <span className="font-extrabold text-slate-950 uppercase tracking-wider text-sm">{resume.fullName || 'Candidate Name'}</span>
+                    <span className="font-semibold text-amber-700 ml-2">— Professional Experience & Credentials (Contd.)</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">Page 2 of 2</span>
+                </div>
+              );
+            }
+
+            const initials = (resume.fullName || 'AB')
+              .split(' ')
+              .map(w => w[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join('');
+
+            return (
+              <header className={`${is2PageFit ? 'mb-2.5' : 'mb-3.5'}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    {/* Candidate Name in Bold Navy */}
+                    <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'} font-black text-slate-950 tracking-tight uppercase leading-none`}>
+                      {resume.fullName || 'Akash Bhattacharya'}
+                    </h1>
+
+                    {/* Subtitle in Warm Amber / Rust Orange */}
+                    <p className="text-xs sm:text-[13px] font-bold text-amber-700 tracking-wide mt-1 leading-snug">
+                      {resume.title || 'Product Manager | Digital Products | Scalable Delivery Platforms | High-Performing Teams'}
+                    </p>
+
+                    {/* Contact details row with icons */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-800 font-medium mt-1.5">
+                      {resume.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-amber-700 shrink-0" />
+                          <span>{resume.phone}</span>
+                        </span>
+                      )}
+                      {resume.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-amber-700 shrink-0" />
+                          <span>{resume.email}</span>
+                        </span>
+                      )}
+                      {resume.linkedin && (
+                        <span className="flex items-center gap-1">
+                          <LinkedInIcon className="w-3 h-3 text-amber-700 shrink-0" />
+                          <span>{resume.linkedin.replace(/^https?:\/\//, '')}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Location row with map pin icon */}
+                    {(resume.location || resume.preferredLocations) && (
+                      <div className="flex items-center gap-1 text-[10.5px] text-slate-700 font-medium mt-1">
+                        <MapPin className="w-3 h-3 text-amber-700 shrink-0" />
+                        <span>
+                          Current Location - {resume.location || 'Kolkata/Bengaluru, INDIA'}
+                          {resume.preferredLocations ? ` , ${resume.preferredLocations}` : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Circular Candidate Photo / Avatar (Enhancv Top-Right Badge) */}
+                  <div className="shrink-0">
+                    {resume.photoUrl ? (
+                      <img
+                        src={resume.photoUrl}
+                        alt={resume.fullName}
+                        className="w-20 h-20 rounded-full object-cover border-2 border-slate-300 shadow-sm"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-slate-900 text-amber-500 font-bold text-xl flex items-center justify-center border-2 border-amber-600/40 shadow-sm">
+                        {initials}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </header>
+            );
+          };
+
+          const renderEnhancvSummary = () => (
+            resume.summary ? (
+              <section className={`${is2PageFit ? 'mb-2' : 'mb-3'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-1">
+                  SUMMARY
+                </h2>
+                <p className={`${getFontSizeClass()} text-slate-850 leading-relaxed text-justify`}>
+                  {resume.summary}
+                </p>
+              </section>
+            ) : null
+          );
+
+          const renderEnhancvSkills = () => (
+            resume.skills && resume.skills.length > 0 ? (
+              <section className={`${is2PageFit ? 'mb-2.5' : 'mb-3.5'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-1.5">
+                  SKILLS
+                </h2>
+                <div className="space-y-1.5">
+                  {resume.skills.map((cat) => (
+                    <div key={cat.id} className="text-xs">
+                      <span className="font-bold text-amber-700 block mb-0.5">{cat.categoryName}</span>
+                      <p className="text-slate-800 leading-snug">
+                        {cat.skills.join(', ')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderEnhancvExperience = (exps: typeof resume.experience, isContinuation = false) => (
+            exps && exps.length > 0 ? (
+              <section className={`${is2PageFit ? 'mb-2.5' : 'mb-3.5'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-950 pb-0.5 mb-2.5">
+                  EXPERIENCE {isContinuation ? '(Contd.)' : ''}
+                </h2>
+                <div className="space-y-3">
+                  {exps.map((exp) => (
+                    <div key={exp.id} className="flex gap-2.5 sm:gap-3 text-xs">
+                      {/* Left Date + Dot Column */}
+                      <div className="w-32 sm:w-36 shrink-0 flex items-start justify-between gap-1 pt-0.5">
+                        <span className="font-bold text-slate-950 text-[11px] whitespace-nowrap">
+                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                        </span>
+                        <span className="text-slate-950 font-black text-sm leading-none shrink-0">•</span>
+                      </div>
+                      {/* Right Role + Company + Bullets Column */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-slate-950 text-xs">
+                          {exp.role}
+                        </div>
+                        <div className="font-bold text-amber-700 text-xs mb-1">
+                          {exp.company}
+                        </div>
+                        {exp.bullets && exp.bullets.length > 0 && (
+                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderEnhancvEducation = () => (
+            resume.education && resume.education.length > 0 ? (
+              <section className={`${is2PageFit ? 'mb-2.5' : 'mb-3'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-950 pb-0.5 mb-2">
+                  EDUCATION
+                </h2>
+                <div className="space-y-2">
+                  {resume.education.map((edu) => (
+                    <div key={edu.id} className="flex gap-2.5 sm:gap-3 text-xs">
+                      <div className="w-32 sm:w-36 shrink-0 flex items-start justify-between gap-1 pt-0.5">
+                        <span className="font-bold text-slate-950 text-[11px] whitespace-nowrap">
+                          {edu.graduationDate}
+                        </span>
+                        <span className="text-slate-950 font-black text-sm leading-none shrink-0">•</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-slate-950 text-xs">{edu.degree}</div>
+                        <div className="font-bold text-amber-700 text-xs">{edu.institution}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderEnhancvCertifications = () => (
+            resume.certifications && resume.certifications.length > 0 ? (
+              <section className={`${is2PageFit ? 'mb-2.5' : 'mb-3'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-950 pb-0.5 mb-2">
+                  CERTIFICATIONS
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                  {resume.certifications.map((cert, idx) => (
+                    <div key={idx} className="leading-snug">
+                      <span className="font-bold text-slate-950 block text-[11px] sm:text-xs">{cert}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderEnhancvAchievements = () => (
+            resume.projects && resume.projects.length > 0 ? (
+              <section className={`${is2PageFit ? 'mb-2' : 'mb-2.5'}`}>
+                <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-950 pb-0.5 mb-2">
+                  KEY ACHIEVEMENTS
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                  {resume.projects.map((proj, idx) => {
+                    const achievementIcons = [
+                      <Trophy className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
+                      <BarChart3 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />,
+                      <TrendingUp className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
+                      <Gem className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
+                      <Rocket className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    ];
+                    const icon = achievementIcons[idx % achievementIcons.length];
+                    return (
+                      <div key={proj.id} className="flex items-start gap-2 p-2 rounded bg-slate-50 border border-slate-200/80">
+                        {icon}
+                        <div className="text-[11px] leading-snug text-slate-800">
+                          <strong className="text-slate-950 font-bold">{proj.name}: </strong>
+                          <span>{proj.description || proj.bullets?.[0] || ''}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ) : null
+          );
+
+          return (
+            <div
+              id="resume-printable-area"
+              data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+              className="flex flex-col items-center w-full"
+            >
+              {partition.isMultiPage ? (
+                <>
+                  {/* SHEET 1 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    {renderEnhancvHeader(false)}
+                    {renderEnhancvSummary()}
+                    {renderEnhancvSkills()}
+                    {renderEnhancvExperience(partition.p1Exp, false)}
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    {renderEnhancvHeader(true)}
+                    {renderEnhancvExperience(partition.p2Exp, true)}
+                    {renderEnhancvEducation()}
+                    {renderEnhancvCertifications()}
+                    {renderEnhancvAchievements()}
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  {renderEnhancvHeader(false)}
+                  {renderEnhancvSummary()}
+                  {renderEnhancvSkills()}
+                  {renderEnhancvExperience(resume.experience, false)}
+                  {renderEnhancvEducation()}
+                  {renderEnhancvCertifications()}
+                  {renderEnhancvAchievements()}
+                  <SheetFooter pageText="Page 1 of 1" />
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============================================================ */}
+        {/* FORMAT: GRAPHICAL INFOGRAPHIC & KPI GRID (2-PAGE FIT)        */}
+        {/* ============================================================ */}
+        {template === 'graphical_metric' && (() => {
+          const renderGraphicalHeader = (isContinuation = false) => {
+            if (isContinuation) {
+              return (
+                <div className="bg-slate-900 text-white rounded-lg px-4 py-2 mb-3 flex justify-between items-center text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black uppercase tracking-wider text-sm">{resume.fullName || 'Candidate Name'}</span>
+                    <span className="text-amber-400 font-semibold">• Executive CV (Contd.)</span>
+                  </div>
+                  <span className="text-[11px] text-slate-300 font-medium">Page 2 of 2</span>
+                </div>
+              );
+            }
+
+            return (
+              <header className="mb-3">
+                {/* Dark Executive Hero Card */}
+                <div className="bg-slate-950 text-white rounded-xl p-4 sm:p-5 shadow-md">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                      <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white">
+                        {resume.fullName || 'Candidate Name'}
+                      </h1>
+                      <p className="text-xs sm:text-sm font-bold text-amber-400 tracking-wide mt-0.5">
+                        {resume.title || 'Product Manager | Enterprise Platforms'}
+                      </p>
+                    </div>
+
+                    {/* Contact Badges */}
+                    <div className="flex flex-wrap gap-1.5 text-[11px]">
+                      {resume.phone && (
+                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
+                          <Phone className="w-3 h-3 text-amber-400" />
+                          <span>{resume.phone}</span>
+                        </span>
+                      )}
+                      {resume.email && (
+                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
+                          <Mail className="w-3 h-3 text-amber-400" />
+                          <span>{resume.email}</span>
+                        </span>
+                      )}
+                      {resume.location && (
+                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
+                          <MapPin className="w-3 h-3 text-amber-400" />
+                          <span>{resume.location}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4 Graphical KPI Metric Stat Badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-800">
+                    <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 text-center">
+                      <div className="text-amber-400 font-black text-sm flex items-center justify-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>13+ Years</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Product Leadership</div>
+                    </div>
+                    <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 text-center">
+                      <div className="text-blue-400 font-black text-sm flex items-center justify-center gap-1">
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Tier-1 BFSI</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Core Banking & Risk</div>
+                    </div>
+                    <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 text-center">
+                      <div className="text-emerald-400 font-black text-sm flex items-center justify-center gap-1">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>120M+ Vol</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">Platform Throughput</div>
+                    </div>
+                    <div className="bg-slate-900/90 rounded-lg p-2 border border-slate-800 text-center">
+                      <div className="text-purple-400 font-black text-sm flex items-center justify-center gap-1">
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        <span>IIT Bombay</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mt-0.5">SJMSOM MBA Alum</div>
+                    </div>
+                  </div>
+                </div>
+              </header>
+            );
+          };
+
+          const renderGraphicalSummary = () => (
+            resume.summary ? (
+              <section className="mb-3">
+                <div className="bg-indigo-50/60 border-l-4 border-indigo-600 rounded-r-lg p-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-indigo-950 mb-1">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Executive Value Proposition</span>
+                  </div>
+                  <p className="text-xs text-slate-800 leading-relaxed text-justify">
+                    {resume.summary}
+                  </p>
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderGraphicalSkills = () => (
+            resume.skills && resume.skills.length > 0 ? (
+              <section className="mb-3">
+                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                  <Wrench className="w-3.5 h-3.5 text-slate-700" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                    Core Technical & Strategic Capabilities
+                  </h2>
+                </div>
+                <div className="space-y-2">
+                  {resume.skills.map((cat) => (
+                    <div key={cat.id} className="text-xs">
+                      <span className="font-bold text-indigo-900 block mb-1">{cat.categoryName}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {cat.skills.map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-0.5 rounded text-[11px] font-medium border border-slate-200"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderGraphicalTimeline = (exps: typeof resume.experience) => (
+            exps && exps.length > 0 ? (
+              <section className="mb-3">
+                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2.5">
+                  <Briefcase className="w-3.5 h-3.5 text-slate-700" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                    Professional Experience History
+                  </h2>
+                </div>
+                <div className="space-y-3.5">
+                  {exps.map((exp) => (
+                    <div key={exp.id} className="border-l-2 border-indigo-600 pl-3 relative">
+                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 absolute -left-[6px] top-1" />
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5">
+                        <div>
+                          <span className="font-bold text-xs text-slate-950">{exp.role}</span>
+                          <span className="text-xs font-bold text-indigo-700"> @ {exp.company}</span>
+                        </div>
+                        <span className="text-[11px] font-semibold text-slate-500 shrink-0">
+                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `| ${exp.location}` : ''}
+                        </span>
+                      </div>
+                      {exp.bullets && exp.bullets.length > 0 && (
+                        <div className="mt-1">
+                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderGraphicalEducation = () => (
+            resume.education && resume.education.length > 0 ? (
+              <section className="mb-3">
+                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                  <GraduationCap className="w-3.5 h-3.5 text-slate-700" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                    Education & Credentials
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {resume.education.map((edu) => (
+                    <div key={edu.id} className="p-2 rounded bg-slate-50 border border-slate-200">
+                      <div className="font-bold text-slate-950">{edu.degree}</div>
+                      <div className="text-indigo-700 font-semibold">{edu.institution}</div>
+                      <div className="text-[10.5px] text-slate-500 italic mt-0.5">{edu.graduationDate}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderGraphicalCertifications = () => (
+            resume.certifications && resume.certifications.length > 0 ? (
+              <section className="mb-3">
+                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                  <Award className="w-3.5 h-3.5 text-slate-700" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                    Professional Certifications
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                  {resume.certifications.map((c, idx) => (
+                    <div key={idx} className="flex items-start gap-1.5 p-1.5 rounded bg-slate-50 border border-slate-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <span className="font-semibold text-slate-900 text-[11px]">{c}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          const renderGraphicalAchievements = () => (
+            resume.projects && resume.projects.length > 0 ? (
+              <section className="mb-2">
+                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                  <Trophy className="w-3.5 h-3.5 text-slate-700" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                    Key Strategic Deliverables & Milestone Achievements
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className="border-l-4 border-amber-500 bg-amber-50/40 p-2 rounded-r border border-slate-200">
+                      <span className="font-bold text-slate-950 block">{proj.name}</span>
+                      <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">
+                        {proj.description || proj.bullets?.[0] || ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          return (
+            <div
+              id="resume-printable-area"
+              data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+              className="flex flex-col items-center w-full"
+            >
+              {partition.isMultiPage ? (
+                <>
+                  {/* SHEET 1 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    {renderGraphicalHeader(false)}
+                    {renderGraphicalSummary()}
+                    {renderGraphicalSkills()}
+                    {renderGraphicalTimeline(partition.p1Exp)}
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    {renderGraphicalHeader(true)}
+                    {renderGraphicalTimeline(partition.p2Exp)}
+                    {renderGraphicalEducation()}
+                    {renderGraphicalCertifications()}
+                    {renderGraphicalAchievements()}
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] ${containerPadding} text-slate-900 leading-normal`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  {renderGraphicalHeader(false)}
+                  {renderGraphicalSummary()}
+                  {renderGraphicalSkills()}
+                  {renderGraphicalTimeline(resume.experience)}
+                  {renderGraphicalEducation()}
+                  {renderGraphicalCertifications()}
+                  {renderGraphicalAchievements()}
+                  <SheetFooter pageText="Page 1 of 1" />
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ============================================================ */}
         {/* FORMAT 0: NAUKRI & INDIAN CORPORATE ATS STANDARD             */}
         {/* ============================================================ */}
