@@ -35,8 +35,9 @@ export const ResumeUploadModal: React.FC<Props> = ({ isOpen, onClose, onSave }) 
         setRawText(text);
         const parsed = parseExtractedTextToResume(text, file.name);
         onSave(parsed);
-        setSuccessMessage(`Successfully extracted ${text.split('\n').length} lines from ${file.name}!`);
-        setTimeout(onClose, 1000);
+        const totalSkills = parsed.skills.reduce((acc, c) => acc + c.skills.length, 0);
+        setSuccessMessage(`Successfully parsed ${parsed.fullName}: ${parsed.experience.length} experiences, ${totalSkills} skills, ${parsed.education.length} degrees, ${parsed.certifications?.length || 0} certifications!`);
+        setTimeout(onClose, 1200);
       }
     } catch (err: any) {
       console.error(err);
@@ -62,8 +63,9 @@ export const ResumeUploadModal: React.FC<Props> = ({ isOpen, onClose, onSave }) 
     try {
       const parsed = parseExtractedTextToResume(rawText);
       onSave(parsed);
-      setSuccessMessage('Successfully parsed and imported your resume!');
-      setTimeout(onClose, 800);
+      const totalSkills = parsed.skills.reduce((acc, c) => acc + c.skills.length, 0);
+      setSuccessMessage(`Successfully parsed ${parsed.fullName}: ${parsed.experience.length} experiences, ${totalSkills} skills, ${parsed.education.length} degrees!`);
+      setTimeout(onClose, 1200);
     } catch (err: any) {
       setErrorMessage(err.message || 'Error parsing text.');
     }
