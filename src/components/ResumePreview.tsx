@@ -15,7 +15,10 @@ import {
 } from 'lucide-react';
 
 const cleanBulletText = (text: string) => {
-  return text.replace(/^[•\-*▪▸–—]\s*/, '').trim();
+  if (!text) return '';
+  return text
+    .replace(/^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\d.)]+\s*/, '')
+    .trim();
 };
 
 interface BulletListProps {
@@ -37,7 +40,7 @@ export const BulletList: React.FC<BulletListProps> = ({
 }) => {
   const valid = (bullets || [])
     .map(cleanBulletText)
-    .filter(b => b.length > 0);
+    .filter(b => b.length > 0 && !/^[\s\t•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022]+$/.test(b));
 
   if (valid.length === 0) return null;
 
@@ -46,7 +49,7 @@ export const BulletList: React.FC<BulletListProps> = ({
       {valid.map((b, i) => (
         <div key={i} className="flex items-start gap-2 break-inside-avoid text-slate-800">
           <span className={`select-none text-slate-700 font-bold shrink-0 leading-[1.35] text-[10px] sm:text-[11px] ${bulletClassName}`}>•</span>
-          <span className={`flex-1 leading-normal text-slate-800 text-justify ${textClassName}`}>{b}</span>
+          <span className={`flex-1 leading-normal text-slate-800 text-left ${textClassName}`}>{b}</span>
         </div>
       ))}
     </div>
@@ -76,7 +79,12 @@ export const ResumePreview: React.FC<Props> = ({
   onResumeChange,
   isDownloadingPdf
 }) => {
-  const [previewZoom, setPreviewZoom] = useState<number>(100);
+  const [previewZoom, setPreviewZoom] = useState<number>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1440) {
+      return 85;
+    }
+    return 100;
+  });
 
   const templatesList: { id: ResumeTemplate; label: string; icon: string }[] = [
     { id: 'naukri', label: 'Naukri & Indian ATS', icon: '🇮🇳' },
@@ -276,13 +284,14 @@ export const ResumePreview: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Paper Container - Uses mx-auto to never clip the left margin in narrow panes */}
-      <div className="bg-slate-200/60 p-2 sm:p-5 rounded-2xl overflow-x-auto w-full flex flex-col items-center">
+      {/* Paper Container - Uses w-fit mx-auto so the left margin is NEVER negative or clipped */}
+      <div className="bg-slate-200/60 p-2 sm:p-5 rounded-2xl overflow-x-auto w-full">
         <div
-          className="transition-transform duration-150 origin-top w-full flex justify-center"
+          className="w-fit mx-auto transition-transform duration-150"
           style={{
             transform: previewZoom !== 100 ? `scale(${previewZoom / 100})` : undefined,
-            marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * 1100}px` : undefined
+            transformOrigin: 'top center',
+            marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * 1150}px` : undefined
           }}
         >
         {/* ============================================================ */}
@@ -447,7 +456,7 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'certifications' && resume.certifications && resume.certifications.length > 0) {
                 return (
-                  <section key="certifications" className={`${sectionMargin} break-inside-avoid`}>
+                  <section key="certifications" className={sectionMargin}>
                     <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
                       <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Professional Certifications & Credentials
@@ -470,7 +479,7 @@ export const ResumePreview: React.FC<Props> = ({
 
               if (secId === 'projects' && resume.projects && resume.projects.length > 0) {
                 return (
-                  <section key="projects" className={`${sectionMargin} break-inside-avoid`}>
+                  <section key="projects" className={sectionMargin}>
                     <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
                       <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Projects & Strategic Deliverables
@@ -478,8 +487,8 @@ export const ResumePreview: React.FC<Props> = ({
                     </div>
                     <div className={jobSpacing}>
                       {resume.projects.map((proj) => (
-                        <div key={proj.id} className="break-inside-avoid">
-                          <div className="flex items-baseline justify-between gap-1">
+                        <div key={proj.id}>
+                          <div className="flex items-baseline justify-between gap-1 break-inside-avoid">
                             <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{proj.name}</span>
                             {proj.technologies && proj.technologies.length > 0 && (
                               <span className="text-xs text-slate-600 italic">({proj.technologies.join(', ')})</span>
@@ -654,8 +663,8 @@ export const ResumePreview: React.FC<Props> = ({
                     </div>
                     <div className={is2PageFit ? 'space-y-2' : 'space-y-3.5'}>
                       {resume.experience.map((exp) => (
-                        <div key={exp.id} className="break-inside-avoid">
-                          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5">
+                        <div key={exp.id}>
+                          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5 break-inside-avoid">
                             <div>
                               <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} text-slate-950`}>{exp.role}</span>
                               <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-semibold text-slate-800`}> | {exp.company}</span>
@@ -673,7 +682,7 @@ export const ResumePreview: React.FC<Props> = ({
 
                 {/* Projects & Deliverables */}
                 {resume.projects && resume.projects.length > 0 && (
-                  <section className="break-inside-avoid pt-1">
+                  <section className="pt-1">
                     <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
                       <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                         Key Strategic Deliverables & Projects
@@ -681,8 +690,8 @@ export const ResumePreview: React.FC<Props> = ({
                     </div>
                     <div className={jobSpacing}>
                       {resume.projects.map((proj) => (
-                        <div key={proj.id} className={`break-inside-avoid ${is2PageFit ? 'text-[11px]' : 'text-[12px]'}`}>
-                          <div className="flex items-baseline justify-between">
+                        <div key={proj.id} className={is2PageFit ? 'text-[11px]' : 'text-[12px]'}>
+                          <div className="flex items-baseline justify-between break-inside-avoid">
                             <span className="font-bold text-slate-950">{proj.name}</span>
                             {proj.technologies && proj.technologies.length > 0 && (
                               <span className="text-[10.5px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
@@ -772,9 +781,9 @@ export const ResumePreview: React.FC<Props> = ({
                 </div>
                 <div className={jobSpacing}>
                   {resume.experience.map((exp) => (
-                    <div key={exp.id} className="break-inside-avoid">
+                    <div key={exp.id}>
                       {/* Double-Line Experience Header */}
-                      <div className="border-b border-slate-200 pb-0.5 mb-0.5">
+                      <div className="border-b border-slate-200 pb-0.5 mb-0.5 break-inside-avoid">
                         <div className="flex justify-between items-baseline">
                           <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} text-slate-950`}>{exp.role}</span>
                           <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold text-slate-800`}>{exp.company}</span>
@@ -794,7 +803,7 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Academic Credentials & Education */}
             {resume.education && resume.education.length > 0 && (
-              <section className={`${sectionMargin} break-inside-avoid`}>
+              <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Education & Credentials
@@ -802,7 +811,7 @@ export const ResumePreview: React.FC<Props> = ({
                 </div>
                 <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 ${getFontSizeClass()}`}>
                   {resume.education.map((edu) => (
-                    <div key={edu.id} className="border-l-2 border-slate-300 pl-2">
+                    <div key={edu.id} className="border-l-2 border-slate-300 pl-2 break-inside-avoid">
                       <div className="font-bold text-slate-950">{edu.degree}</div>
                       <div className="text-slate-800">{edu.institution}</div>
                       <div className="text-[10.5px] text-slate-500 italic">{edu.graduationDate} {edu.gpa ? `(${edu.gpa})` : ''}</div>
@@ -814,7 +823,7 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Certifications: Compact horizontal stream */}
             {resume.certifications && resume.certifications.length > 0 && (
-              <section className={`${sectionMargin} break-inside-avoid`}>
+              <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Certifications & Accreditations
@@ -822,7 +831,7 @@ export const ResumePreview: React.FC<Props> = ({
                 </div>
                 <div className={`flex flex-wrap gap-1 ${getFontSizeClass()}`}>
                   {resume.certifications.map((cert, i) => (
-                    <span key={i} className={`bg-slate-50 text-slate-800 border border-slate-200 ${is2PageFit ? 'px-1.5 py-0.2' : 'px-2 py-0.5'} rounded font-medium`}>
+                    <span key={i} className={`bg-slate-50 text-slate-800 border border-slate-200 ${is2PageFit ? 'px-1.5 py-0.2' : 'px-2 py-0.5'} rounded font-medium break-inside-avoid`}>
                       {cert}
                     </span>
                   ))}
@@ -1102,11 +1111,7 @@ export const ResumePreview: React.FC<Props> = ({
                   <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-900 border-l-4 border-indigo-600 pl-2.5 mb-2">
                     Certifications
                   </h2>
-                  <ul className="list-disc list-outside ml-4 space-y-1 text-xs text-slate-700">
-                    {resume.certifications.map((c, i) => (
-                      <li key={i}>{c}</li>
-                    ))}
-                  </ul>
+                  <BulletList bullets={resume.certifications} bulletSpacing="space-y-1" fontSizeClass="text-xs text-slate-700" />
                 </section>
               )}
             </div>
@@ -1469,7 +1474,7 @@ export const ResumePreview: React.FC<Props> = ({
 
             {/* Certifications */}
             {resume.certifications && resume.certifications.length > 0 && (
-              <section className={`${sectionMargin} break-inside-avoid`}>
+              <section className={sectionMargin}>
                 <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
                     Certifications & Credentials

@@ -465,7 +465,7 @@ export function App() {
 
           {/* RIGHT PANE: Live ATS Resume Preview */}
           {workspaceView !== 'editor' && (
-            <div className={`${workspaceView === 'preview' ? 'lg:col-span-12 flex justify-center' : 'lg:col-span-6 xl:col-span-7 sticky top-20'} ${mobileTab === 'editor' ? 'hidden lg:block' : 'block'}`}>
+            <div className={`${workspaceView === 'preview' ? 'lg:col-span-12 flex justify-center' : 'lg:col-span-6 xl:col-span-7 sticky top-20'} ${mobileTab === 'editor' ? 'hidden lg:block' : 'block'} min-w-0`}>
               <ResumePreview
                 resume={resume}
                 template={template}

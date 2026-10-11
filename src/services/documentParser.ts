@@ -379,6 +379,10 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
   const allExpLines = expSections.flatMap(s => s.content);
   const expEntries: WorkExperience[] = [];
   let currentExp: WorkExperience | null = null;
+  let pendingBullet = false;
+
+  const bulletRegex = /^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022]\s*/;
+  const isBulletCharOnly = (s: string) => /^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022][\s\t]*$/.test(s);
 
   // Regex for dates at start of role:
   // "03/2025 - Present Lead Product Manager" or "07/2021 - 02/2025 Product Owner" or "2019 - 2021 Senior Product Manager"
@@ -407,6 +411,7 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         current: dates.toLowerCase().includes('present') || dates.toLowerCase().includes('since'),
         bullets: []
       };
+      pendingBullet = false;
     } else if (match) {
       if (currentExp) expEntries.push(currentExp);
       const dates = match[1].trim();
@@ -414,7 +419,7 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
       let company = '';
 
       // The next line may be the company name if it's not a bullet or new date
-      if (i + 1 < allExpLines.length && !allExpLines[i + 1].startsWith('•') && !allExpLines[i + 1].startsWith('-') && !allExpLines[i + 1].match(dateRoleRegex)) {
+      if (i + 1 < allExpLines.length && !allExpLines[i + 1].startsWith('•') && !allExpLines[i + 1].startsWith('-') && !allExpLines[i + 1].startsWith('*') && !allExpLines[i + 1].match(dateRoleRegex)) {
         company = allExpLines[i + 1];
         i++; // Consume company line
       }
@@ -435,12 +440,18 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         current: dates.toLowerCase().includes('present'),
         bullets: []
       };
+      pendingBullet = false;
     } else if (currentExp) {
-      if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
-        const cleanBullet = line.replace(/^[•\-*]\s*/, '').trim();
+      if (isBulletCharOnly(line)) {
+        pendingBullet = true;
+        continue;
+      }
+      if (bulletRegex.test(line) || pendingBullet) {
+        const cleanBullet = line.replace(bulletRegex, '').trim();
         if (cleanBullet.length > 5) {
           currentExp.bullets.push(cleanBullet);
         }
+        pendingBullet = false;
       } else if (currentExp.bullets.length > 0) {
         // Wrapped bullet line from previous item
         currentExp.bullets[currentExp.bullets.length - 1] += ' ' + line;
