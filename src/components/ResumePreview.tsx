@@ -201,7 +201,7 @@ export const ResumePreview: React.FC<Props> = ({
     switch (design?.fontFamily) {
       case 'roboto': return "'Roboto', sans-serif";
       case 'merriweather': return "'Merriweather', serif";
-      case 'garamond': return "'Garamond', Georgia, serif";
+      case 'garamond': return "'EB Garamond', 'Garamond', Georgia, serif";
       case 'sans': return "system-ui, -apple-system, sans-serif";
       default: return "'Inter', sans-serif";
     }
@@ -565,7 +565,7 @@ export const ResumePreview: React.FC<Props> = ({
                 <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 mb-1">
                   SUMMARY
                 </h2>
-                <p className={`${getFontSizeClass()} text-slate-850 leading-relaxed text-justify`}>
+                <p className={`${getFontSizeClass()} text-slate-850 leading-relaxed text-left`}>
                   {resume.summary}
                 </p>
               </section>
@@ -899,7 +899,7 @@ export const ResumePreview: React.FC<Props> = ({
                     <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Executive Value Proposition</span>
                   </div>
-                  <p className="text-xs text-slate-800 leading-relaxed text-justify">
+                  <p className="text-xs text-slate-800 leading-relaxed text-left">
                     {resume.summary}
                   </p>
                 </div>

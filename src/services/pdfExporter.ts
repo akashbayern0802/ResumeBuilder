@@ -130,7 +130,30 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
         }
       });
 
-      const pageImgData = canvas.toDataURL('image/jpeg', 0.98);
+      // Preserve natural aspect ratio and avoid horizontal or vertical stretching
+      const canvasAspect = canvas.height / canvas.width;
+      const a4Aspect = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
+
+      let pageCanvas = canvas;
+
+      // If the rendered sheet's aspect ratio differs from A4, fit onto exact A4 aspect ratio canvas
+      if (Math.abs(canvasAspect - a4Aspect) > 0.01) {
+        const targetWidth = canvas.width;
+        const targetHeight = Math.round(canvas.width * a4Aspect);
+        const fittedCanvas = document.createElement('canvas');
+        fittedCanvas.width = targetWidth;
+        fittedCanvas.height = targetHeight;
+        const fCtx = fittedCanvas.getContext('2d');
+        if (fCtx) {
+          fCtx.fillStyle = '#ffffff';
+          fCtx.fillRect(0, 0, targetWidth, targetHeight);
+          // Draw un-distorted at natural 1:1 scale from top
+          fCtx.drawImage(canvas, 0, 0, canvas.width, Math.min(canvas.height, targetHeight), 0, 0, canvas.width, Math.min(canvas.height, targetHeight));
+          pageCanvas = fittedCanvas;
+        }
+      }
+
+      const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
       pageImages.push(pageImgData);
 
       if (i > 0) {
