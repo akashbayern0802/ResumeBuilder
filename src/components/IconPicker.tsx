@@ -131,3 +131,4 @@ export const IconPicker: React.FC<IconPickerProps> = ({
     </div>
   );
 };
+
