@@ -160,30 +160,40 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
   // 4. Calculate smart page slices
   const pageSlices: { startY: number; endY: number }[] = [];
 
-  // SPECIAL 2-PAGE FIT GUARANTEE:
-  // If 2-page fit mode is active and total height fits within 2 A4 pages:
-  if (isTwoPageFit && activeCanvas.height <= (2 * idealPageHeightPx + 10)) {
-    if (activeCanvas.height <= idealPageHeightPx) {
-      // Entire content fits in a single page
-      pageSlices.push({ startY: 0, endY: activeCanvas.height });
-    } else {
-      // Fits in 2 pages: pick an optimal, balanced cut between Page 1 and Page 2
-      const minCutY = Math.max(100, activeCanvas.height - idealPageHeightPx + 10);
-      const maxCutY = idealPageHeightPx - 10;
-      const midCutY = Math.round(activeCanvas.height / 2);
-      let targetCutY = Math.min(maxCutY, Math.max(minCutY, midCutY));
+  // If content fits on 1 page:
+  if (activeCanvas.height <= idealPageHeightPx) {
+    pageSlices.push({ startY: 0, endY: activeCanvas.height });
+  } else if (isTwoPageFit && activeCanvas.height <= (2 * idealPageHeightPx + 10)) {
+    // Fits in 2 pages: fill Page 1 as fully as possible down to idealPageHeightPx - 15
+    const idealCut = idealPageHeightPx - 15;
+    let targetCutY = idealCut;
 
-      // Scan within [minCutY, maxCutY] for the best whitespace gap
-      targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, minCutY, 140);
+    // Check if any atomic element (bullet point or header) straddles idealCut
+    const straddling = canvasAvoidZones.find(
+      zone => zone.top < idealCut && zone.bottom > idealCut && (idealCut - zone.top) < (idealPageHeightPx * 0.25)
+    );
 
-      // Ensure cut is strictly bounded so neither page overflows A4
-      targetCutY = Math.min(maxCutY, Math.max(minCutY, targetCutY));
-
-      pageSlices.push({ startY: 0, endY: targetCutY });
-      pageSlices.push({ startY: targetCutY, endY: activeCanvas.height });
+    if (straddling) {
+      targetCutY = Math.max(Math.round(idealPageHeightPx * 0.65), straddling.top - 4);
     }
+
+    // Scan for nearest clean blank gap
+    targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, Math.round(idealPageHeightPx * 0.65), 140);
+
+    // Guarantee Page 2 does not overflow A4 (targetCutY must leave at most idealPageHeightPx on Page 2)
+    const minCutForPage2 = activeCanvas.height - idealPageHeightPx + 10;
+    if (targetCutY < minCutForPage2) {
+      targetCutY = minCutForPage2;
+      targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, minCutForPage2, 60);
+    }
+
+    // Ensure targetCutY does not exceed Page 1 limit
+    targetCutY = Math.min(idealPageHeightPx - 10, targetCutY);
+
+    pageSlices.push({ startY: 0, endY: targetCutY });
+    pageSlices.push({ startY: targetCutY, endY: activeCanvas.height });
   } else {
-    // Standard multi-page slicer
+    // Standard multi-page slicer: fill each page up to idealPageHeightPx - 15
     let currentStartY = 0;
     while (currentStartY < activeCanvas.height) {
       const remainingHeight = activeCanvas.height - currentStartY;
@@ -193,15 +203,15 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
         break;
       }
 
-      const idealCutY = currentStartY + idealPageHeightPx;
+      const idealCutY = currentStartY + idealPageHeightPx - 15;
       let targetCutY = idealCutY;
 
       const straddling = canvasAvoidZones.find(
-        zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.20)
+        zone => zone.top < idealCutY && zone.bottom > idealCutY && (idealCutY - zone.top) < (idealPageHeightPx * 0.25)
       );
 
       if (straddling) {
-        targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.6), straddling.top - 4);
+        targetCutY = Math.max(currentStartY + Math.round(idealPageHeightPx * 0.65), straddling.top - 4);
       }
 
       targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, currentStartY, 140);

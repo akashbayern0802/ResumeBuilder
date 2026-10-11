@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ResumeData, ResumeTemplate, ResumeSectionId } from '../types/resume';
 import {
   Award,
@@ -9,8 +9,49 @@ import {
   Download,
   FileCheck,
   Palette,
-  ArrowUpDown
+  ArrowUpDown,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
+
+const cleanBulletText = (text: string) => {
+  return text.replace(/^[•\-*▪▸–—]\s*/, '').trim();
+};
+
+interface BulletListProps {
+  bullets: string[];
+  className?: string;
+  bulletSpacing?: string;
+  fontSizeClass?: string;
+  bulletClassName?: string;
+  textClassName?: string;
+}
+
+export const BulletList: React.FC<BulletListProps> = ({
+  bullets,
+  className = '',
+  bulletSpacing = 'space-y-1',
+  fontSizeClass = '',
+  bulletClassName = '',
+  textClassName = ''
+}) => {
+  const valid = (bullets || [])
+    .map(cleanBulletText)
+    .filter(b => b.length > 0);
+
+  if (valid.length === 0) return null;
+
+  return (
+    <div className={`${bulletSpacing} ${fontSizeClass} ${className}`}>
+      {valid.map((b, i) => (
+        <div key={i} className="flex items-start gap-2 break-inside-avoid text-slate-800">
+          <span className={`select-none text-slate-700 font-bold shrink-0 leading-[1.35] text-[10px] sm:text-[11px] ${bulletClassName}`}>•</span>
+          <span className={`flex-1 leading-normal text-slate-800 text-justify ${textClassName}`}>{b}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface Props {
   resume: ResumeData;
@@ -35,6 +76,7 @@ export const ResumePreview: React.FC<Props> = ({
   onResumeChange,
   isDownloadingPdf
 }) => {
+  const [previewZoom, setPreviewZoom] = useState<number>(100);
 
   const templatesList: { id: ResumeTemplate; label: string; icon: string }[] = [
     { id: 'naukri', label: 'Naukri & Indian ATS', icon: '🇮🇳' },
@@ -90,12 +132,12 @@ export const ResumePreview: React.FC<Props> = ({
     }
   };
 
-  // Dynamic layout tokens for 2-page fit compaction
-  const containerPadding = is2PageFit ? 'p-4 sm:p-6' : 'p-8 sm:p-12';
-  const headerMargin = is2PageFit ? 'border-b-2 pb-1.5 mb-2' : 'border-b-2 pb-3.5 mb-4';
-  const sectionMargin = is2PageFit ? 'mb-2' : 'mb-4';
-  const jobSpacing = is2PageFit ? 'space-y-1.5' : 'space-y-4';
-  const bulletSpacing = is2PageFit ? 'mt-0.5 space-y-0.5' : 'mt-1.5 space-y-1';
+  // Dynamic layout tokens for 2-page fit compaction without giant empty gaps
+  const containerPadding = is2PageFit ? 'p-4 sm:p-5' : 'p-6 sm:p-8';
+  const headerMargin = is2PageFit ? 'border-b-2 pb-1 mb-2' : 'border-b-2 pb-2.5 mb-3';
+  const sectionMargin = is2PageFit ? 'mb-2' : 'mb-3';
+  const jobSpacing = is2PageFit ? 'space-y-1.5' : 'space-y-2.5';
+  const bulletSpacing = is2PageFit ? 'mt-0.5 space-y-0.5' : 'mt-1 space-y-1';
 
   const primaryColor = design?.primaryColor || '#0f172a';
   const showPhoto = Boolean(design?.showPhoto && resume.photoUrl);
@@ -195,11 +237,54 @@ export const ResumePreview: React.FC<Props> = ({
               <span>{isDownloadingPdf ? 'Generating...' : 'Download'}</span>
             </button>
           )}
+
+          {/* Zoom controls to fit any screen without clipping */}
+          <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5 border border-slate-200 ml-1">
+            <button
+              type="button"
+              onClick={() => setPreviewZoom(z => Math.max(60, z - 10))}
+              className="p-1 hover:bg-white rounded text-slate-600 hover:text-slate-900 cursor-pointer"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewZoom(100)}
+              className="px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-700 hover:text-slate-900 cursor-pointer"
+              title="Reset zoom to 100%"
+            >
+              {previewZoom}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewZoom(z => Math.min(130, z + 10))}
+              className="p-1 hover:bg-white rounded text-slate-600 hover:text-slate-900 cursor-pointer"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewZoom(prev => prev === 80 ? 100 : 80)}
+              className={`px-1.5 py-0.5 text-[10px] font-bold rounded cursor-pointer ${previewZoom === 80 ? 'bg-indigo-600 text-white' : 'text-indigo-600 hover:bg-indigo-50'}`}
+              title="Fit preview to pane width"
+            >
+              Fit
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Paper Container */}
-      <div className="bg-slate-200/60 p-4 sm:p-6 rounded-2xl flex justify-center overflow-x-auto w-full">
+      {/* Paper Container - Uses mx-auto to never clip the left margin in narrow panes */}
+      <div className="bg-slate-200/60 p-2 sm:p-5 rounded-2xl overflow-x-auto w-full flex flex-col items-center">
+        <div
+          className="transition-transform duration-150 origin-top w-full flex justify-center"
+          style={{
+            transform: previewZoom !== 100 ? `scale(${previewZoom / 100})` : undefined,
+            marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * 1100}px` : undefined
+          }}
+        >
         {/* ============================================================ */}
         {/* FORMAT 0: NAUKRI & INDIAN CORPORATE ATS STANDARD             */}
         {/* ============================================================ */}
@@ -207,7 +292,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Authority & Immediate Recruiter Metadata */}
@@ -326,11 +411,7 @@ export const ResumePreview: React.FC<Props> = ({
                             </div>
                           </div>
 
-                          <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
-                            {exp.bullets.map((b, i) => (
-                              <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                            ))}
-                          </ul>
+                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                         </div>
                       ))}
                     </div>
@@ -406,11 +487,7 @@ export const ResumePreview: React.FC<Props> = ({
                           </div>
                           <p className={`${getFontSizeClass()} text-slate-700 mt-0.5`}>{proj.description}</p>
                           {proj.bullets && proj.bullets.length > 0 && (
-                            <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} ${getFontSizeClass()} text-slate-800`}>
-                              {proj.bullets.map((b, i) => (
-                                <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                              ))}
-                            </ul>
+                            <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                           )}
                         </div>
                       ))}
@@ -431,7 +508,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Header: Full-Width Clean Double-Border Header */}
@@ -587,11 +664,7 @@ export const ResumePreview: React.FC<Props> = ({
                               {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `(${exp.location})` : ''}
                             </div>
                           </div>
-                          <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
-                            {exp.bullets.map((b, i) => (
-                              <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                            ))}
-                          </ul>
+                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                         </div>
                       ))}
                     </div>
@@ -617,11 +690,7 @@ export const ResumePreview: React.FC<Props> = ({
                           </div>
                           <p className="text-slate-700 mt-0.5">{proj.description}</p>
                           {proj.bullets && proj.bullets.length > 0 && (
-                            <ul className={`list-disc list-outside ml-4 mt-0.5 ${bulletSpacing} text-slate-800`}>
-                              {proj.bullets.map((b, i) => (
-                                <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                              ))}
-                            </ul>
+                            <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} />
                           )}
                         </div>
                       ))}
@@ -640,7 +709,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-7' : 'p-8 sm:p-11'} text-slate-900 leading-normal`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
             style={{ fontFamily: getFontFamily() }}
           >
             {/* Double-Line Top Authority Header */}
@@ -716,11 +785,7 @@ export const ResumePreview: React.FC<Props> = ({
                         </div>
                       </div>
 
-                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
-                        {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5 break-inside-avoid">{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
                   ))}
                 </div>
@@ -774,7 +839,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Top Header */}
@@ -910,11 +975,7 @@ export const ResumePreview: React.FC<Props> = ({
                         </div>
                       </div>
 
-                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-snug`}>
-                        {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5">{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
                   ))}
                 </div>
@@ -930,7 +991,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
             style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header with modern indigo pill */}
@@ -988,11 +1049,7 @@ export const ResumePreview: React.FC<Props> = ({
                           {exp.location ? ` | ${exp.location}` : ''}
                         </span>
                       </div>
-                      <ul className="list-disc list-outside ml-4 mt-1.5 space-y-1 text-xs text-slate-800 leading-relaxed">
-                        {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5">{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
                   ))}
                 </div>
@@ -1063,7 +1120,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Header: Centered, High Density */}
@@ -1107,11 +1164,7 @@ export const ResumePreview: React.FC<Props> = ({
                         <span>{exp.role}</span>
                         <span>{exp.location}</span>
                       </div>
-                      <ul className="list-disc list-outside ml-4 mt-1 space-y-0.5 text-xs text-slate-900">
-                        {exp.bullets.map((b, i) => (
-                          <li key={i}>{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing="mt-1 space-y-0.5" fontSizeClass="text-xs text-slate-900" />
                     </div>
                   ))}
                 </div>
@@ -1182,7 +1235,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Tech Header */}
@@ -1233,11 +1286,7 @@ export const ResumePreview: React.FC<Props> = ({
                           {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
                         </span>
                       </div>
-                      <ul className="list-disc list-outside ml-4 mt-1 space-y-1 text-xs text-slate-700 leading-relaxed">
-                        {exp.bullets.map((b, i) => (
-                          <li key={i}>{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing="mt-1 space-y-1" fontSizeClass="text-xs text-slate-700 leading-relaxed" />
                     </div>
                   ))}
                 </div>
@@ -1308,7 +1357,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] max-w-[800px] shrink-0 min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
+            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
               template === 'harvard' ? 'font-serif' : 'font-sans'
             }`}
             style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
@@ -1386,11 +1435,7 @@ export const ResumePreview: React.FC<Props> = ({
                         </div>
                       </div>
 
-                      <ul className={`list-disc list-outside ml-4 ${bulletSpacing} ${getFontSizeClass()} text-slate-800 leading-normal`}>
-                        {exp.bullets.map((b, i) => (
-                          <li key={i} className="pl-0.5">{b}</li>
-                        ))}
-                      </ul>
+                      <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
                   ))}
                 </div>
@@ -1437,6 +1482,7 @@ export const ResumePreview: React.FC<Props> = ({
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
