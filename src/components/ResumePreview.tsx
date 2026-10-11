@@ -910,8 +910,8 @@ export const ResumePreview: React.FC<Props> = ({
           const renderGraphicalSkills = () => (
             resume.skills && resume.skills.length > 0 ? (
               <section className="mb-3">
-                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
-                  <Wrench className="w-3.5 h-3.5 text-slate-700" />
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
+                  <Wrench className="w-3.5 h-3.5 text-indigo-600" />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Core Technical & Strategic Capabilities
                   </h2>
@@ -939,16 +939,16 @@ export const ResumePreview: React.FC<Props> = ({
 
           const renderGraphicalTimeline = (exps: typeof resume.experience) => (
             exps && exps.length > 0 ? (
-              <section className="mb-3">
-                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2.5">
-                  <Briefcase className="w-3.5 h-3.5 text-slate-700" />
+              <section className="mb-4">
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-3">
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Professional Experience History
                   </h2>
                 </div>
-                <div className="space-y-3.5">
+                <div className="space-y-4 pt-1 ml-1">
                   {exps.map((exp) => (
-                    <div key={exp.id} className="border-l-2 border-indigo-600 pl-3 relative">
+                    <div key={exp.id} className="border-l-2 border-indigo-600 pl-3.5 relative">
                       <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 absolute -left-[6px] top-1" />
                       <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5">
                         <div>
@@ -974,8 +974,8 @@ export const ResumePreview: React.FC<Props> = ({
           const renderGraphicalEducation = () => (
             resume.education && resume.education.length > 0 ? (
               <section className="mb-3">
-                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
-                  <GraduationCap className="w-3.5 h-3.5 text-slate-700" />
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Education & Credentials
                   </h2>
@@ -996,8 +996,8 @@ export const ResumePreview: React.FC<Props> = ({
           const renderGraphicalCertifications = () => (
             resume.certifications && resume.certifications.length > 0 ? (
               <section className="mb-3">
-                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
-                  <Award className="w-3.5 h-3.5 text-slate-700" />
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
+                  <Award className="w-3.5 h-3.5 text-indigo-600" />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Professional Certifications
                   </h2>
@@ -1005,7 +1005,7 @@ export const ResumePreview: React.FC<Props> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                   {resume.certifications.map((c, idx) => (
                     <div key={idx} className="flex items-start gap-1.5 p-1.5 rounded bg-slate-50 border border-slate-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
                       <span className="font-semibold text-slate-900 text-[11px]">{c}</span>
                     </div>
                   ))}
@@ -1032,17 +1032,17 @@ export const ResumePreview: React.FC<Props> = ({
             if (achList.length === 0) return null;
 
             return (
-              <section className="mb-2">
-                <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
-                  <Trophy className="w-3.5 h-3.5 text-slate-700" />
+              <section className="mb-3">
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
+                  <Trophy className="w-3.5 h-3.5 text-indigo-600" />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Key Strategic Deliverables & Milestone Achievements
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {achList.map((ach) => (
-                    <div key={ach.id} className="border-l-4 border-amber-500 bg-amber-50/40 p-2 rounded-r border border-slate-200 flex items-start gap-2">
-                      {renderAchievementIcon(ach.icon, "w-4 h-4 text-amber-600 shrink-0 mt-0.5")}
+                    <div key={ach.id} className="border-l-4 border-indigo-600 bg-indigo-50/40 p-2 rounded-r border border-slate-200 flex items-start gap-2">
+                      {renderAchievementIcon(ach.icon, "w-4 h-4 text-indigo-600 shrink-0 mt-0.5")}
                       <div>
                         <span className="font-bold text-slate-950 block">{ach.title}</span>
                         <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">
@@ -1063,8 +1063,8 @@ export const ResumePreview: React.FC<Props> = ({
                 {resume.customSections.map((cs) => {
                   if ((resume.hiddenSections || []).includes(cs.id)) return null;
                   return (
-                    <section key={cs.id} className="mb-2">
-                      <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                    <section key={cs.id} className="mb-3">
+                      <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
                         {renderAchievementIcon(cs.icon || 'sparkles', "w-3.5 h-3.5 text-indigo-600 shrink-0")}
                         <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                           {cs.title}
@@ -1072,7 +1072,7 @@ export const ResumePreview: React.FC<Props> = ({
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         {cs.items.map((it) => (
-                          <div key={it.id} className="border-l-4 border-indigo-500 bg-indigo-50/40 p-2 rounded-r border border-slate-200">
+                          <div key={it.id} className="border-l-4 border-indigo-600 bg-indigo-50/40 p-2 rounded-r border border-slate-200">
                             <div className="flex items-baseline gap-1.5">
                               {renderAchievementIcon(it.icon || 'check', "w-3 h-3 text-indigo-600 shrink-0")}
                               <span className="font-bold text-slate-950 text-[11px]">{it.title}</span>

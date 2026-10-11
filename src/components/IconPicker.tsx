@@ -37,23 +37,23 @@ export const ICON_OPTIONS: { id: AchievementIconType; label: string }[] = [
 
 export function renderAchievementIcon(
   iconType?: AchievementIconType,
-  className = "w-4 h-4 text-amber-600 shrink-0"
+  className = "w-4 h-4 text-indigo-600 shrink-0"
 ): React.ReactNode {
   switch (iconType) {
     case 'trophy': return <Trophy className={className} />;
     case 'award': return <Award className={className} />;
-    case 'barchart': return <BarChart3 className={className.replace('text-amber-600', 'text-blue-600')} />;
-    case 'trending': return <TrendingUp className={className.replace('text-amber-600', 'text-emerald-600')} />;
-    case 'gem': return <Gem className={className.replace('text-amber-600', 'text-purple-600')} />;
-    case 'rocket': return <Rocket className={className.replace('text-amber-600', 'text-rose-600')} />;
-    case 'target': return <Target className={className.replace('text-amber-600', 'text-red-600')} />;
-    case 'star': return <Star className={className.replace('text-amber-600', 'text-yellow-500')} />;
-    case 'sparkles': return <Sparkles className={className.replace('text-amber-600', 'text-indigo-600')} />;
-    case 'briefcase': return <Briefcase className={className.replace('text-amber-600', 'text-slate-700')} />;
-    case 'globe': return <Globe className={className.replace('text-amber-600', 'text-cyan-600')} />;
-    case 'zap': return <Zap className={className.replace('text-amber-600', 'text-amber-500')} />;
-    case 'shield': return <Shield className={className.replace('text-amber-600', 'text-blue-700')} />;
-    case 'check': return <Check className={className.replace('text-amber-600', 'text-emerald-600')} />;
+    case 'barchart': return <BarChart3 className={className} />;
+    case 'trending': return <TrendingUp className={className} />;
+    case 'gem': return <Gem className={className} />;
+    case 'rocket': return <Rocket className={className} />;
+    case 'target': return <Target className={className} />;
+    case 'star': return <Star className={className} />;
+    case 'sparkles': return <Sparkles className={className} />;
+    case 'briefcase': return <Briefcase className={className} />;
+    case 'globe': return <Globe className={className} />;
+    case 'zap': return <Zap className={className} />;
+    case 'shield': return <Shield className={className} />;
+    case 'check': return <Check className={className} />;
     default: return <Trophy className={className} />;
   }
 }
