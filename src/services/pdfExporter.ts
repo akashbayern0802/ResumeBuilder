@@ -1,6 +1,10 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Standard A4 dimensions (in mm)
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+
 /**
  * Checks whether a specific horizontal row of pixels on the canvas contains only whitespace.
  */
@@ -93,10 +97,60 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     throw new Error(`Element with id ${elementId} not found`);
   }
 
+  // 1. Discrete Multi-Sheet Architecture:
+  // If the resume contains explicit .pdf-page elements, render each page directly with zero slicing artifacts!
+  const pageElements = Array.from(element.querySelectorAll<HTMLElement>('.pdf-page'));
+  if (pageElements.length > 0) {
+    const pageImages: string[] = [];
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    for (let i = 0; i < pageElements.length; i++) {
+      const pageEl = pageElements[i];
+
+      const canvas = await html2canvas(pageEl, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: 1200,
+        onclone: (_clonedDoc, clonedElement) => {
+          let curr: HTMLElement | null = clonedElement;
+          while (curr) {
+            if (curr.style.transform && curr.style.transform !== 'none') {
+              curr.style.transform = 'none';
+            }
+            curr = curr.parentElement;
+          }
+        }
+      });
+
+      const pageImgData = canvas.toDataURL('image/jpeg', 0.98);
+      pageImages.push(pageImgData);
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      pdf.addImage(pageImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+    }
+
+    return {
+      pages: pageImages,
+      pdf,
+      totalPages: pageElements.length
+    };
+  }
+
   const isTwoPageFit = element.getAttribute('data-fit-two-pages') === 'true' ||
     element.classList.contains('fit-two-pages');
 
-  // 1. Measure positions of only small atomic items (under 55px) using unscaled offsetTop
+  // Fallback: Measure positions of only small atomic items (under 55px) using unscaled offsetTop
   const avoidElements: { top: number; bottom: number }[] = [];
 
   const candidates = element.querySelectorAll('li, h1, h2, h3, .break-inside-avoid');
@@ -136,9 +190,6 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     }
   });
 
-  // Standard A4 dimensions
-  const A4_WIDTH_MM = 210;
-  const A4_HEIGHT_MM = 297;
   const A4_ASPECT_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
   const idealPageHeightPx = Math.round(canvas.width * A4_ASPECT_RATIO);
 

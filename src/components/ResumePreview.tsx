@@ -17,9 +17,56 @@ import {
 const cleanBulletText = (text: string) => {
   if (!text) return '';
   return text
-    .replace(/^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\d.)]+\s*/, '')
+    .replace(/^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6]\s*/, '')
     .trim();
 };
+
+export function partitionResumeContent(resume: ResumeData, is2PageFit: boolean) {
+  const experiences = resume.experience || [];
+  const totalBullets = experiences.reduce((sum, e) => sum + (e.bullets?.length || 0), 0);
+  const projectsCount = resume.projects?.length || 0;
+  const certsCount = resume.certifications?.length || 0;
+
+  // Detect if resume spans 2 distinct A4 pages
+  const isMultiPage = Boolean(
+    is2PageFit ||
+    experiences.length >= 3 ||
+    totalBullets >= 10 ||
+    (experiences.length >= 2 && (projectsCount >= 2 || certsCount >= 4))
+  );
+
+  if (!isMultiPage || experiences.length <= 1) {
+    return {
+      isMultiPage: false,
+      p1Exp: experiences,
+      p2Exp: [] as typeof experiences
+    };
+  }
+
+  // Balance experiences between Page 1 and Page 2
+  // Page 1 holds Header, Summary, Skills, and top experiences
+  // Page 2 holds remaining experiences, Education, Certifications, Key Achievements
+  let splitIndex = 3;
+  if (experiences.length === 2) {
+    splitIndex = 1;
+  } else if (experiences.length === 3) {
+    const top2Bullets = (experiences[0]?.bullets?.length || 0) + (experiences[1]?.bullets?.length || 0);
+    splitIndex = top2Bullets >= 10 ? 2 : 3;
+  } else {
+    // 4 or more experiences: top 2 or 3 on Page 1
+    const top3Bullets = (experiences[0]?.bullets?.length || 0) + (experiences[1]?.bullets?.length || 0) + (experiences[2]?.bullets?.length || 0);
+    splitIndex = top3Bullets > 18 ? 2 : 3;
+  }
+
+  splitIndex = Math.min(splitIndex, experiences.length - 1);
+  splitIndex = Math.max(1, splitIndex);
+
+  return {
+    isMultiPage: true,
+    p1Exp: experiences.slice(0, splitIndex),
+    p2Exp: experiences.slice(splitIndex)
+  };
+}
 
 interface BulletListProps {
   bullets: string[];
@@ -149,6 +196,28 @@ export const ResumePreview: React.FC<Props> = ({
 
   const primaryColor = design?.primaryColor || '#0f172a';
   const showPhoto = Boolean(design?.showPhoto && resume.photoUrl);
+
+  const partition = partitionResumeContent(resume, is2PageFit);
+
+  const SheetBoundaryDivider: React.FC<{ pageNumber: number }> = ({ pageNumber }) => (
+    <div
+      className="no-print my-6 flex items-center justify-center gap-3 w-[800px] select-none"
+      data-html2canvas-ignore="true"
+    >
+      <div className="flex-1 border-t-2 border-dashed border-slate-300"></div>
+      <span className="px-3.5 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-full shadow-2xs">
+        📄 Page {pageNumber} of 2 (A4 Sheet Boundary)
+      </span>
+      <div className="flex-1 border-t-2 border-dashed border-slate-300"></div>
+    </div>
+  );
+
+  const SheetFooter: React.FC<{ pageText: string }> = ({ pageText }) => (
+    <div className="pt-2 mt-auto border-t border-slate-200 text-[10px] text-slate-400 flex justify-between items-center select-none">
+      <span>{resume.fullName || 'Candidate'} • Curriculum Vitae</span>
+      <span>{pageText}</span>
+    </div>
+  );
 
   return (
     <div className="flex flex-col items-center gap-3 w-full">
@@ -285,461 +354,638 @@ export const ResumePreview: React.FC<Props> = ({
       </div>
 
       {/* Paper Container - Uses w-fit mx-auto so the left margin is NEVER negative or clipped */}
-      <div className="bg-slate-200/60 p-2 sm:p-5 rounded-2xl overflow-x-auto w-full">
+      <div className="bg-slate-200/60 p-2 sm:p-5 rounded-2xl overflow-x-auto w-full flex justify-center">
         <div
           className="w-fit mx-auto transition-transform duration-150"
           style={{
             transform: previewZoom !== 100 ? `scale(${previewZoom / 100})` : undefined,
             transformOrigin: 'top center',
-            marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * 1150}px` : undefined
+            marginBottom: previewZoom < 100 ? `${-((100 - previewZoom) / 100) * (partition.isMultiPage ? 2350 : 1150)}px` : undefined
           }}
         >
         {/* ============================================================ */}
         {/* FORMAT 0: NAUKRI & INDIAN CORPORATE ATS STANDARD             */}
         {/* ============================================================ */}
-        {template === 'naukri' && (
-          <div
-            id="resume-printable-area"
-            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
-            style={{ fontFamily: getFontFamily() }}
-          >
-            {/* Header: Authority & Immediate Recruiter Metadata */}
-            <header className={headerMargin} style={{ borderColor: primaryColor }}>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                <div className="flex-1">
-                  <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl mb-0.5' : 'text-3xl sm:text-4xl mb-1'} font-black text-slate-950 tracking-tight uppercase`} style={{ color: primaryColor }}>
-                    {resume.fullName || 'Candidate Name'}
-                  </h1>
-                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
-                    {resume.title || 'Product / Project Manager | Strategy & Consulting'}
-                  </p>
+        {template === 'naukri' && (() => {
+          const renderNaukriHeader = (isContinuation = false) => {
+            if (isContinuation) {
+              return (
+                <div className={`border-b-2 ${is2PageFit ? 'pb-1 mb-2' : 'pb-1.5 mb-2.5'} flex justify-between items-baseline text-xs text-slate-600`} style={{ borderColor: primaryColor }}>
+                  <div>
+                    <span className="font-bold text-slate-900 uppercase tracking-wider text-sm">{resume.fullName || 'Candidate Name'}</span>
+                    <span className="text-slate-600 font-medium ml-2">— {resume.title || 'Curriculum Vitae'} (Contd.)</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">Page 2 of 2</span>
+                </div>
+              );
+            }
 
-                  {/* Contact info */}
-                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
-                    {resume.email && <span>{resume.email}</span>}
-                    {resume.phone && <span>• {resume.phone}</span>}
-                    {resume.location && <span>• {resume.location}</span>}
-                    {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+            return (
+              <header className={headerMargin} style={{ borderColor: primaryColor }}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                  <div className="flex-1">
+                    <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl mb-0.5' : 'text-3xl sm:text-4xl mb-1'} font-black text-slate-950 tracking-tight uppercase`} style={{ color: primaryColor }}>
+                      {resume.fullName || 'Candidate Name'}
+                    </h1>
+                    <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
+                      {resume.title || 'Product / Project Manager | Strategy & Consulting'}
+                    </p>
+
+                    {/* Contact info */}
+                    <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium ${is2PageFit ? 'mb-1' : 'mb-2'}`}>
+                      {resume.email && <span>{resume.email}</span>}
+                      {resume.phone && <span>• {resume.phone}</span>}
+                      {resume.location && <span>• {resume.location}</span>}
+                      {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+                    </div>
+
+                    {/* Indian Recruiter Metadata (Total Exp, Preferred Locations) */}
+                    {(resume.totalExperience || resume.preferredLocations) && (
+                      <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-2 ${is2PageFit ? 'pt-1.5 mt-0.5' : 'pt-2 mt-1'} border-t border-slate-200`}>
+                        {resume.totalExperience && (
+                          <span
+                            style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
+                            className={`bg-slate-100 text-slate-900 border border-slate-300 font-bold ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
+                          >
+                            Experience: <strong className="text-slate-950 font-black">{resume.totalExperience}</strong>
+                          </span>
+                        )}
+                        {resume.preferredLocations && (
+                          <span
+                            style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
+                            className={`bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
+                          >
+                            <span className="font-semibold text-indigo-700">Preferred Locations: </span>
+                            <span className="text-slate-800">{resume.preferredLocations}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Indian Recruiter Metadata (Total Exp, Preferred Locations) */}
-                  {(resume.totalExperience || resume.preferredLocations) && (
-                    <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-2 ${is2PageFit ? 'pt-1.5 mt-0.5' : 'pt-2 mt-1'} border-t border-slate-200`}>
-                      {resume.totalExperience && (
-                        <span
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
-                          className={`bg-slate-100 text-slate-900 border border-slate-300 font-bold ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
-                        >
-                          Experience: <strong className="text-slate-950 font-black">{resume.totalExperience}</strong>
-                        </span>
-                      )}
-                      {resume.preferredLocations && (
-                        <span
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 8px' : '3px 10px', borderRadius: '4px' }}
-                          className={`bg-indigo-50 text-indigo-900 border border-indigo-200 font-medium ${is2PageFit ? 'text-[10px]' : 'text-[11px]'}`}
-                        >
-                          <span className="font-semibold text-indigo-700">Preferred Locations: </span>
-                          <span className="text-slate-800">{resume.preferredLocations}</span>
-                        </span>
-                      )}
+                  {/* Candidate Photo (Enhancv Style) */}
+                  {showPhoto && (
+                    <div className={`${is2PageFit ? 'w-20 h-20' : 'w-24 h-24'} rounded-full border-2 border-slate-300 overflow-hidden shadow-md shrink-0`}>
+                      <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
                     </div>
                   )}
                 </div>
+              </header>
+            );
+          };
 
-                {/* Candidate Photo (Enhancv Style) */}
-                {showPhoto && (
-                  <div className={`${is2PageFit ? 'w-20 h-20' : 'w-24 h-24'} rounded-full border-2 border-slate-300 overflow-hidden shadow-md shrink-0`}>
-                    <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
+          const renderNaukriSection = (secId: ResumeSectionId, expSubset?: typeof resume.experience) => {
+            if ((resume.hiddenSections || []).includes(secId)) return null;
+
+            if (secId === 'summary' && resume.summary) {
+              return (
+                <section key="summary" className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Executive Profile Summary
+                    </h2>
                   </div>
-                )}
-              </div>
-            </header>
+                  <p className={`${getFontSizeClass()} text-slate-800 leading-relaxed text-justify`}>
+                    {resume.summary}
+                  </p>
+                </section>
+              );
+            }
 
-            {/* Dynamic Ordered Sections (Rearrangeable) */}
-            {(resume.sectionOrder && resume.sectionOrder.length > 0
-              ? resume.sectionOrder
-              : (['summary', 'skills', 'experience', 'education', 'certifications', 'projects'] as ResumeSectionId[])
-            ).map((secId) => {
-              if ((resume.hiddenSections || []).includes(secId)) return null;
+            if (secId === 'skills' && resume.skills && resume.skills.length > 0) {
+              return (
+                <section key="skills" className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Key Competencies & Technical Capabilities
+                    </h2>
+                  </div>
+                  <div className={`${is2PageFit ? 'space-y-1' : 'space-y-1.5'} ${getFontSizeClass()}`}>
+                    {resume.skills.map((cat) => (
+                      <div key={cat.id} className="leading-snug">
+                        <span className="font-bold text-slate-950">{cat.categoryName}: </span>
+                        <span className="text-slate-800">{cat.skills.join(' • ')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
 
-              if (secId === 'summary' && resume.summary) {
-                return (
-                  <section key="summary" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Executive Profile Summary
-                      </h2>
-                    </div>
-                    <p className={`${getFontSizeClass()} text-slate-800 leading-relaxed text-justify`}>
-                      {resume.summary}
-                    </p>
-                  </section>
-                );
-              }
-
-              if (secId === 'skills' && resume.skills && resume.skills.length > 0) {
-                return (
-                  <section key="skills" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Key Competencies & Technical Capabilities
-                      </h2>
-                    </div>
-                    <div className={`${is2PageFit ? 'space-y-1' : 'space-y-1.5'} ${getFontSizeClass()}`}>
-                      {resume.skills.map((cat) => (
-                        <div key={cat.id} className="leading-snug">
-                          <span className="font-bold text-slate-950">{cat.categoryName}: </span>
-                          <span className="text-slate-800">{cat.skills.join(' • ')}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
-
-              if (secId === 'experience' && resume.experience && resume.experience.length > 0) {
-                return (
-                  <section key="experience" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Professional Experience
-                      </h2>
-                    </div>
-                    <div className={jobSpacing}>
-                      {resume.experience.map((exp) => (
-                        <div key={exp.id}>
-                          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
-                            <div>
-                              <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
-                              <span className={`${getFontSizeClass()} font-semibold text-slate-800`}> | {exp.company}</span>
-                            </div>
-                            <div className={`${getFontSizeClass()} text-slate-600 font-semibold italic shrink-0`}>
-                              {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
-                              {exp.location ? ` (${exp.location})` : ''}
-                            </div>
-                          </div>
-
-                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
-
-              if (secId === 'education' && resume.education && resume.education.length > 0) {
-                return (
-                  <section key="education" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Education & Academic Credentials
-                      </h2>
-                    </div>
-                    <div className={is2PageFit ? 'space-y-1' : 'space-y-1.5'}>
-                      {resume.education.map((edu) => (
-                        <div key={edu.id} className={`flex items-baseline justify-between ${getFontSizeClass()} break-inside-avoid`}>
+            if (secId === 'experience') {
+              const exps = expSubset !== undefined ? expSubset : (resume.experience || []);
+              if (exps.length === 0) return null;
+              return (
+                <section key={`experience-${exps[0]?.id || 'list'}`} className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Professional Experience {expSubset && expSubset !== resume.experience && expSubset[0] !== resume.experience[0] ? '(Contd.)' : ''}
+                    </h2>
+                  </div>
+                  <div className={jobSpacing}>
+                    {exps.map((exp) => (
+                      <div key={exp.id}>
+                        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1 break-inside-avoid">
                           <div>
-                            <span className="font-bold text-slate-950">{edu.degree}</span>
-                            <span className="text-slate-800"> — {edu.institution}</span>
-                            {edu.gpa && <span className="text-slate-600 font-medium"> ({edu.gpa})</span>}
+                            <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{exp.role}</span>
+                            <span className={`${getFontSizeClass()} font-semibold text-slate-800`}> | {exp.company}</span>
                           </div>
-                          <div className="text-slate-600 font-semibold italic shrink-0">
-                            {edu.graduationDate}
+                          <div className={`${getFontSizeClass()} text-slate-600 font-semibold italic shrink-0`}>
+                            {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                            {exp.location ? ` (${exp.location})` : ''}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
 
-              if (secId === 'certifications' && resume.certifications && resume.certifications.length > 0) {
-                return (
-                  <section key="certifications" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Professional Certifications & Credentials
-                      </h2>
-                    </div>
-                    <div className={`flex flex-wrap gap-1.5 ${getFontSizeClass()}`}>
-                      {resume.certifications.map((cert, i) => (
-                        <span
-                          key={i}
-                          style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 6px' : '3px 8px', borderRadius: '4px' }}
-                          className={`bg-slate-100 text-slate-800 border border-slate-200 font-medium ${getFontSizeClass()} break-inside-avoid`}
-                        >
-                          {cert}
-                        </span>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
+                        <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
 
-              if (secId === 'projects' && resume.projects && resume.projects.length > 0) {
-                return (
-                  <section key="projects" className={sectionMargin}>
-                    <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Projects & Strategic Deliverables
-                      </h2>
-                    </div>
-                    <div className={jobSpacing}>
-                      {resume.projects.map((proj) => (
-                        <div key={proj.id}>
-                          <div className="flex items-baseline justify-between gap-1 break-inside-avoid">
-                            <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{proj.name}</span>
-                            {proj.technologies && proj.technologies.length > 0 && (
-                              <span className="text-xs text-slate-600 italic">({proj.technologies.join(', ')})</span>
-                            )}
-                          </div>
-                          <p className={`${getFontSizeClass()} text-slate-700 mt-0.5`}>{proj.description}</p>
-                          {proj.bullets && proj.bullets.length > 0 && (
-                            <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+            if (secId === 'education' && resume.education && resume.education.length > 0) {
+              return (
+                <section key="education" className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Education & Academic Credentials
+                    </h2>
+                  </div>
+                  <div className={is2PageFit ? 'space-y-1' : 'space-y-1.5'}>
+                    {resume.education.map((edu) => (
+                      <div key={edu.id} className={`flex items-baseline justify-between ${getFontSizeClass()} break-inside-avoid`}>
+                        <div>
+                          <span className="font-bold text-slate-950">{edu.degree}</span>
+                          <span className="text-slate-800"> — {edu.institution}</span>
+                          {edu.gpa && <span className="text-slate-600 font-medium"> ({edu.gpa})</span>}
+                        </div>
+                        <div className="text-slate-600 font-semibold italic shrink-0">
+                          {edu.graduationDate}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+
+            if (secId === 'certifications' && resume.certifications && resume.certifications.length > 0) {
+              return (
+                <section key="certifications" className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Professional Certifications & Credentials
+                    </h2>
+                  </div>
+                  <div className={`flex flex-wrap gap-1.5 ${getFontSizeClass()}`}>
+                    {resume.certifications.map((cert, i) => (
+                      <span
+                        key={i}
+                        style={{ display: 'inline-block', lineHeight: '1.3', padding: is2PageFit ? '2px 6px' : '3px 8px', borderRadius: '4px' }}
+                        className={`bg-slate-100 text-slate-800 border border-slate-200 font-medium ${getFontSizeClass()} break-inside-avoid`}
+                      >
+                        {cert}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+
+            if (secId === 'projects' && resume.projects && resume.projects.length > 0) {
+              return (
+                <section key="projects" className={sectionMargin}>
+                  <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                    <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                      Key Strategic Deliverables & Achievements
+                    </h2>
+                  </div>
+                  <div className={jobSpacing}>
+                    {resume.projects.map((proj) => (
+                      <div key={proj.id}>
+                        <div className="flex items-baseline justify-between gap-1 break-inside-avoid">
+                          <span className={`font-bold ${getFontSizeClass()} text-slate-950`}>{proj.name}</span>
+                          {proj.technologies && proj.technologies.length > 0 && (
+                            <span className="text-xs text-slate-600 italic">({proj.technologies.join(', ')})</span>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </section>
-                );
-              }
+                        {proj.description && proj.description !== proj.name && (
+                          <p className={`${getFontSizeClass()} text-slate-700 mt-0.5`}>{proj.description}</p>
+                        )}
+                        {proj.bullets && proj.bullets.length > 0 && (
+                          <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
 
-              return null;
-            })}
-          </div>
-        )}
+            return null;
+          };
+
+          return (
+            <div
+              id="resume-printable-area"
+              data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+              className="flex flex-col items-center w-full"
+            >
+              {partition.isMultiPage ? (
+                <>
+                  {/* SHEET 1 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderNaukriHeader(false)}
+                      {renderNaukriSection('summary')}
+                      {renderNaukriSection('skills')}
+                      {renderNaukriSection('experience', partition.p1Exp)}
+                    </div>
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderNaukriHeader(true)}
+                      {renderNaukriSection('experience', partition.p2Exp)}
+                      {renderNaukriSection('education')}
+                      {renderNaukriSection('certifications')}
+                      {renderNaukriSection('projects')}
+                    </div>
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${containerPadding} text-slate-900 leading-normal flex flex-col justify-between`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  <div>
+                    {renderNaukriHeader(false)}
+                    {(resume.sectionOrder && resume.sectionOrder.length > 0
+                      ? resume.sectionOrder
+                      : (['summary', 'skills', 'experience', 'education', 'certifications', 'projects'] as ResumeSectionId[])
+                    ).map((secId) => renderNaukriSection(secId))}
+                  </div>
+                  <SheetFooter pageText="Page 1 of 1" />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ============================================================ */}
         {/* FORMAT: DOUBLE-COLUMN EXECUTIVE (GUARANTEED 2-PAGE FIT)      */}
         {/* ============================================================ */}
-        {template === 'double_column' && (
-          <div
-            id="resume-printable-area"
-            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-10'} text-slate-900 leading-normal`}
-            style={{ fontFamily: getFontFamily() }}
-          >
-            {/* Header: Full-Width Clean Double-Border Header */}
-            <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2.5' : 'pb-3 mb-4'}`} style={{ borderColor: primaryColor }}>
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
-                <div className="flex-1">
-                  <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
-                    {resume.fullName || 'Candidate Name'}
-                  </h1>
-                  <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-1`}>
-                    {resume.title || 'Product / Project Manager | Strategy & Consulting'}
-                  </p>
-                  <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-0.5 ${getFontSizeClass()} text-slate-600 font-medium`}>
-                    {resume.email && <span>{resume.email}</span>}
-                    {resume.phone && <span>• {resume.phone}</span>}
-                    {resume.location && <span>• {resume.location}</span>}
-                    {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+        {template === 'double_column' && (() => {
+          const renderDoubleColHeader = (isContinuation = false) => {
+            if (isContinuation) {
+              return (
+                <header className={`border-b-4 border-double ${is2PageFit ? 'pb-1.5 mb-2' : 'pb-2 mb-3'} flex justify-between items-baseline`} style={{ borderColor: primaryColor }}>
+                  <div>
+                    <span className="font-black text-slate-950 tracking-tight uppercase text-lg" style={{ color: primaryColor }}>
+                      {resume.fullName || 'Candidate Name'}
+                    </span>
+                    <span className="text-slate-600 font-semibold ml-2 text-xs">— {resume.title || 'Curriculum Vitae'} (Contd.)</span>
                   </div>
-                </div>
+                  <span className="text-[11px] font-semibold text-slate-400">Page 2 of 2</span>
+                </header>
+              );
+            }
 
-                {showPhoto && (
-                  <div className={`${is2PageFit ? 'w-16 h-16' : 'w-20 h-20'} rounded-full border-2 border-slate-300 overflow-hidden shadow-sm shrink-0`}>
-                    <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
-                  </div>
-                )}
-              </div>
-            </header>
-
-            {/* 2-Column Split Body: Left 35% Sidebar, Right 65% Main Track */}
-            <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
-              {/* LEFT SIDEBAR (md:col-span-4): Compact parallel track */}
-              <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                {/* Executive Summary */}
-                {resume.summary && (
-                  <div className="break-inside-avoid">
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                        <FileText className="w-3.5 h-3.5 text-slate-700" />
-                        Executive Profile
-                      </h2>
-                    </div>
-                    <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
-                      {resume.summary}
+            return (
+              <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2.5' : 'pb-3 mb-4'}`} style={{ borderColor: primaryColor }}>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                  <div className="flex-1">
+                    <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-2xl sm:text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
+                      {resume.fullName || 'Candidate Name'}
+                    </h1>
+                    <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wide uppercase mb-1`}>
+                      {resume.title || 'Product / Project Manager | Strategy & Consulting'}
                     </p>
+                    <div className={`flex flex-wrap items-center justify-center sm:justify-start gap-x-2.5 gap-y-0.5 ${getFontSizeClass()} text-slate-600 font-medium`}>
+                      {resume.email && <span>{resume.email}</span>}
+                      {resume.phone && <span>• {resume.phone}</span>}
+                      {resume.location && <span>• {resume.location}</span>}
+                      {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+                    </div>
                   </div>
-                )}
 
-                {/* Key Competencies (Compact Tags) */}
-                {resume.skills && resume.skills.length > 0 && (
-                  <div className="break-inside-avoid">
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                        <Wrench className="w-3.5 h-3.5 text-slate-700" />
-                        Key Competencies
-                      </h2>
+                  {showPhoto && (
+                    <div className={`${is2PageFit ? 'w-16 h-16' : 'w-20 h-20'} rounded-full border-2 border-slate-300 overflow-hidden shadow-sm shrink-0`}>
+                      <img src={resume.photoUrl} alt={resume.fullName} className="w-full h-full object-cover" />
                     </div>
-                    <div className={is2PageFit ? 'space-y-1.5' : 'space-y-2'}>
-                      {resume.skills.map((cat) => (
-                        <div key={cat.id} className={is2PageFit ? 'text-[11px]' : 'text-[11.5px]'}>
-                          <span className="font-bold text-slate-900 block mb-0.5">{cat.categoryName}</span>
-                          <div className="flex flex-wrap gap-1">
-                            {cat.skills.map((sk, idx) => (
-                              <span
-                                key={idx}
-                                className={`bg-slate-100 text-slate-800 border border-slate-200/80 ${is2PageFit ? 'px-1 py-0.2 text-[10px]' : 'px-1.5 py-0.5 text-[11px]'} rounded font-medium`}
-                              >
-                                {sk}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              </header>
+            );
+          };
 
-                {/* Education */}
-                {resume.education && resume.education.length > 0 && (
-                  <div className="break-inside-avoid">
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                        <GraduationCap className="w-3.5 h-3.5 text-slate-700" />
-                        Education
-                      </h2>
+          const renderSkillsSidebar = () => (
+            resume.skills && resume.skills.length > 0 ? (
+              <div className="break-inside-avoid">
+                <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                    <Wrench className="w-3.5 h-3.5 text-slate-700" />
+                    Key Competencies
+                  </h2>
+                </div>
+                <div className={is2PageFit ? 'space-y-1.5' : 'space-y-2'}>
+                  {resume.skills.map((cat) => (
+                    <div key={cat.id} className={is2PageFit ? 'text-[11px]' : 'text-[11.5px]'}>
+                      <span className="font-bold text-slate-900 block mb-0.5">{cat.categoryName}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {cat.skills.map((sk, idx) => (
+                          <span
+                            key={idx}
+                            className={`bg-slate-100 text-slate-800 border border-slate-200/80 ${is2PageFit ? 'px-1 py-0.2 text-[10px]' : 'px-1.5 py-0.5 text-[11px]'} rounded font-medium`}
+                          >
+                            {sk}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className={`${is2PageFit ? 'space-y-1.5 text-[11px]' : 'space-y-2 text-[12px]'}`}>
-                      {resume.education.map((edu) => (
-                        <div key={edu.id} className="border-l-2 border-slate-300 pl-2">
-                          <div className="font-bold text-slate-950">{edu.degree}</div>
-                          <div className="text-slate-800">{edu.institution}</div>
-                          <div className="text-[10.5px] text-slate-500 italic">
-                            {edu.graduationDate} {edu.gpa ? `• GPA: ${edu.gpa}` : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+              </div>
+            ) : null
+          );
 
-                {/* Certifications */}
-                {resume.certifications && resume.certifications.length > 0 && (
-                  <div className="break-inside-avoid">
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                        <Award className="w-3.5 h-3.5 text-slate-700" />
-                        Certifications
-                      </h2>
+          const renderEducationSidebar = () => (
+            resume.education && resume.education.length > 0 ? (
+              <div className="break-inside-avoid">
+                <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                    <GraduationCap className="w-3.5 h-3.5 text-slate-700" />
+                    Education
+                  </h2>
+                </div>
+                <div className={`${is2PageFit ? 'space-y-1.5 text-[11px]' : 'space-y-2 text-[12px]'}`}>
+                  {resume.education.map((edu) => (
+                    <div key={edu.id} className="border-l-2 border-slate-300 pl-2">
+                      <div className="font-bold text-slate-950">{edu.degree}</div>
+                      <div className="text-slate-800">{edu.institution}</div>
+                      <div className="text-[10.5px] text-slate-500 italic">
+                        {edu.graduationDate} {edu.gpa ? `• GPA: ${edu.gpa}` : ''}
+                      </div>
                     </div>
-                    <div className={`${is2PageFit ? 'space-y-0.5 text-[10.5px]' : 'space-y-1 text-[11.5px]'} text-slate-800`}>
-                      {resume.certifications.map((cert, i) => (
-                        <div key={i} className="flex items-start gap-1 leading-snug">
-                          <span className="text-slate-400 font-bold">•</span>
-                          <span>{cert}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+              </div>
+            ) : null
+          );
 
-                {/* Metadata Details */}
-                {(resume.totalExperience || resume.preferredLocations) && (
-                  <div className={`p-2 bg-slate-50 rounded-lg border border-slate-200 ${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} space-y-0.5 break-inside-avoid`}>
-                    {resume.totalExperience && (
-                      <div><strong className="text-slate-900">Total Exp:</strong> {resume.totalExperience}</div>
-                    )}
-                    {resume.preferredLocations && (
-                      <div><strong className="text-slate-900">Preferred Locations:</strong> {resume.preferredLocations}</div>
-                    )}
-                  </div>
+          const renderCertificationsSidebar = () => (
+            resume.certifications && resume.certifications.length > 0 ? (
+              <div className="break-inside-avoid">
+                <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                    <Award className="w-3.5 h-3.5 text-slate-700" />
+                    Certifications
+                  </h2>
+                </div>
+                <div className={`${is2PageFit ? 'space-y-0.5 text-[10.5px]' : 'space-y-1 text-[11.5px]'} text-slate-800`}>
+                  {resume.certifications.map((cert, i) => (
+                    <div key={i} className="flex items-start gap-1 leading-snug">
+                      <span className="text-slate-400 font-bold">•</span>
+                      <span>{cert}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null
+          );
+
+          const renderMetadataSidebar = () => (
+            (resume.totalExperience || resume.preferredLocations) ? (
+              <div className={`p-2 bg-slate-50 rounded-lg border border-slate-200 ${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} space-y-0.5 break-inside-avoid`}>
+                {resume.totalExperience && (
+                  <div><strong className="text-slate-900">Total Exp:</strong> {resume.totalExperience}</div>
+                )}
+                {resume.preferredLocations && (
+                  <div><strong className="text-slate-900">Preferred Locations:</strong> {resume.preferredLocations}</div>
                 )}
               </div>
+            ) : null
+          );
 
-              {/* RIGHT MAIN TRACK (md:col-span-8): Professional Experience & Projects */}
-              <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
-                {/* Professional Experience */}
-                {resume.experience && resume.experience.length > 0 && (
-                  <section>
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
-                        <Briefcase className="w-3.5 h-3.5 text-slate-700" />
-                        Professional Career History
-                      </h2>
-                    </div>
-                    <div className={is2PageFit ? 'space-y-2' : 'space-y-3.5'}>
-                      {resume.experience.map((exp) => (
-                        <div key={exp.id}>
-                          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5 break-inside-avoid">
-                            <div>
-                              <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} text-slate-950`}>{exp.role}</span>
-                              <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-semibold text-slate-800`}> | {exp.company}</span>
-                            </div>
-                            <div className={`${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 font-medium italic shrink-0`}>
-                              {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `(${exp.location})` : ''}
-                            </div>
-                          </div>
-                          <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+          const renderExpTrack = (exps: typeof resume.experience) => (
+            exps && exps.length > 0 ? (
+              <section>
+                <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1.5' : 'border-b-2 pb-1 mb-2.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                    <Briefcase className="w-3.5 h-3.5 text-slate-700" />
+                    Professional Career History {exps !== resume.experience && exps[0] !== resume.experience[0] ? '(Contd.)' : ''}
+                  </h2>
+                </div>
+                <div className={is2PageFit ? 'space-y-2' : 'space-y-3.5'}>
+                  {exps.map((exp) => (
+                    <div key={exp.id}>
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-0.5 break-inside-avoid">
+                        <div>
+                          <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} text-slate-950`}>{exp.role}</span>
+                          <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-semibold text-slate-800`}> | {exp.company}</span>
                         </div>
-                      ))}
+                        <div className={`${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 font-medium italic shrink-0`}>
+                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `(${exp.location})` : ''}
+                        </div>
+                      </div>
+                      <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
-                  </section>
-                )}
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
 
-                {/* Projects & Deliverables */}
-                {resume.projects && resume.projects.length > 0 && (
-                  <section className="pt-1">
-                    <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
-                      <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                        Key Strategic Deliverables & Projects
-                      </h2>
+          const renderProjectsTrack = () => (
+            resume.projects && resume.projects.length > 0 ? (
+              <section className="pt-1">
+                <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[12.5px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                    Key Strategic Deliverables & Projects
+                  </h2>
+                </div>
+                <div className={jobSpacing}>
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className={is2PageFit ? 'text-[11px]' : 'text-[12px]'}>
+                      <div className="flex items-baseline justify-between break-inside-avoid">
+                        <span className="font-bold text-slate-950">{proj.name}</span>
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <span className="text-[10.5px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
+                        )}
+                      </div>
+                      {proj.description && proj.description !== proj.name && (
+                        <p className="text-slate-700 mt-0.5">{proj.description}</p>
+                      )}
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} />
+                      )}
                     </div>
-                    <div className={jobSpacing}>
-                      {resume.projects.map((proj) => (
-                        <div key={proj.id} className={is2PageFit ? 'text-[11px]' : 'text-[12px]'}>
-                          <div className="flex items-baseline justify-between break-inside-avoid">
-                            <span className="font-bold text-slate-950">{proj.name}</span>
-                            {proj.technologies && proj.technologies.length > 0 && (
-                              <span className="text-[10.5px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
-                            )}
-                          </div>
-                          <p className="text-slate-700 mt-0.5">{proj.description}</p>
-                          {proj.bullets && proj.bullets.length > 0 && (
-                            <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} />
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          return (
+            <div
+              id="resume-printable-area"
+              data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+              className="flex flex-col items-center w-full"
+            >
+              {partition.isMultiPage ? (
+                <>
+                  {/* SHEET 1 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderDoubleColHeader(false)}
+                      <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
+                        <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                          {resume.summary && (
+                            <div className="break-inside-avoid">
+                              <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                                <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                                  <FileText className="w-3.5 h-3.5 text-slate-700" />
+                                  Executive Profile
+                                </h2>
+                              </div>
+                              <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
+                                {resume.summary}
+                              </p>
+                            </div>
                           )}
+                          {renderSkillsSidebar()}
                         </div>
-                      ))}
+                        <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                          {renderExpTrack(partition.p1Exp)}
+                        </div>
+                      </div>
                     </div>
-                  </section>
-                )}
-              </div>
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderDoubleColHeader(true)}
+                      <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
+                        <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                          {renderEducationSidebar()}
+                          {renderCertificationsSidebar()}
+                          {renderMetadataSidebar()}
+                        </div>
+                        <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                          {renderExpTrack(partition.p2Exp)}
+                          {renderProjectsTrack()}
+                        </div>
+                      </div>
+                    </div>
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-5 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  <div>
+                    {renderDoubleColHeader(false)}
+                    <div className={`grid grid-cols-1 md:grid-cols-12 ${is2PageFit ? 'gap-4' : 'gap-5'} items-start`}>
+                      <div className={`md:col-span-4 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                        {resume.summary && (
+                          <div className="break-inside-avoid">
+                            <div className={`${is2PageFit ? 'border-b pb-0.5 mb-1' : 'border-b-2 pb-1 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                              <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal flex items-center gap-1.5`}>
+                                <FileText className="w-3.5 h-3.5 text-slate-700" />
+                                Executive Profile
+                              </h2>
+                            </div>
+                            <p className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} text-slate-800 leading-snug text-justify`}>
+                              {resume.summary}
+                            </p>
+                          </div>
+                        )}
+                        {renderSkillsSidebar()}
+                        {renderEducationSidebar()}
+                        {renderCertificationsSidebar()}
+                        {renderMetadataSidebar()}
+                      </div>
+                      <div className={`md:col-span-8 ${is2PageFit ? 'space-y-2.5' : 'space-y-4'}`}>
+                        {renderExpTrack(resume.experience)}
+                        {renderProjectsTrack()}
+                      </div>
+                    </div>
+                  </div>
+                  <SheetFooter pageText="Page 1 of 1" />
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ============================================================ */}
         {/* FORMAT: DOUBLE-LINE CORPORATE ATS (2-PAGE FIT)               */}
         {/* ============================================================ */}
-        {template === 'double_line' && (
-          <div
-            id="resume-printable-area"
-            data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal`}
-            style={{ fontFamily: getFontFamily() }}
-          >
-            {/* Double-Line Top Authority Header */}
-            <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2' : 'pb-3 mb-4'} text-center`} style={{ borderColor: primaryColor }}>
-              <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
-                {resume.fullName || 'Candidate Name'}
-              </h1>
-              <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wider uppercase mb-1`}>
-                {resume.title || 'Product / Project Manager | Strategy & Consulting'}
-              </p>
-              <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium`}>
-                {resume.email && <span>{resume.email}</span>}
-                {resume.phone && <span>• {resume.phone}</span>}
-                {resume.location && <span>• {resume.location}</span>}
-                {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
-                {resume.totalExperience && <span>• <strong>Exp: {resume.totalExperience}</strong></span>}
-              </div>
-            </header>
+        {template === 'double_line' && (() => {
+          const renderDoubleLineHeader = (isContinuation = false) => {
+            if (isContinuation) {
+              return (
+                <header className={`border-b-4 border-double ${is2PageFit ? 'pb-1.5 mb-2' : 'pb-2 mb-3'} flex justify-between items-baseline`} style={{ borderColor: primaryColor }}>
+                  <div>
+                    <span className="font-black text-slate-950 tracking-tight uppercase text-lg" style={{ color: primaryColor }}>
+                      {resume.fullName || 'Candidate Name'}
+                    </span>
+                    <span className="text-slate-600 font-semibold ml-2 text-xs">— {resume.title || 'Curriculum Vitae'} (Contd.)</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">Page 2 of 2</span>
+                </header>
+              );
+            }
 
-            {/* Executive Summary */}
-            {resume.summary && (
+            return (
+              <header className={`border-b-4 border-double ${is2PageFit ? 'pb-2 mb-2' : 'pb-3 mb-4'} text-center`} style={{ borderColor: primaryColor }}>
+                <h1 className={`${is2PageFit ? 'text-2xl sm:text-3xl' : 'text-3xl'} font-black text-slate-950 tracking-tight uppercase mb-0.5`} style={{ color: primaryColor }}>
+                  {resume.fullName || 'Candidate Name'}
+                </h1>
+                <p className={`${getFontSizeClass()} font-bold text-slate-800 tracking-wider uppercase mb-1`}>
+                  {resume.title || 'Product / Project Manager | Strategy & Consulting'}
+                </p>
+                <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 ${getFontSizeClass()} text-slate-700 font-medium`}>
+                  {resume.email && <span>{resume.email}</span>}
+                  {resume.phone && <span>• {resume.phone}</span>}
+                  {resume.location && <span>• {resume.location}</span>}
+                  {resume.linkedin && <span>• {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
+                  {resume.totalExperience && <span>• <strong>Exp: {resume.totalExperience}</strong></span>}
+                </div>
+              </header>
+            );
+          };
+
+          const renderSummary = () => (
+            resume.summary ? (
               <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
@@ -750,10 +996,11 @@ export const ResumePreview: React.FC<Props> = ({
                   {resume.summary}
                 </p>
               </section>
-            )}
+            ) : null
+          );
 
-            {/* Key Competencies: 2-Column Compact Grid */}
-            {resume.skills && resume.skills.length > 0 && (
+          const renderSkills = () => (
+            resume.skills && resume.skills.length > 0 ? (
               <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
@@ -769,20 +1016,20 @@ export const ResumePreview: React.FC<Props> = ({
                   ))}
                 </div>
               </section>
-            )}
+            ) : null
+          );
 
-            {/* Professional Experience: Structured Double-Line Header */}
-            {resume.experience && resume.experience.length > 0 && (
+          const renderExperience = (exps: typeof resume.experience) => (
+            exps && exps.length > 0 ? (
               <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-2'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                    Professional Experience
+                    Professional Experience {exps !== resume.experience && exps[0] !== resume.experience[0] ? '(Contd.)' : ''}
                   </h2>
                 </div>
                 <div className={jobSpacing}>
-                  {resume.experience.map((exp) => (
+                  {exps.map((exp) => (
                     <div key={exp.id}>
-                      {/* Double-Line Experience Header */}
                       <div className="border-b border-slate-200 pb-0.5 mb-0.5 break-inside-avoid">
                         <div className="flex justify-between items-baseline">
                           <span className={`font-bold ${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} text-slate-950`}>{exp.role}</span>
@@ -793,16 +1040,16 @@ export const ResumePreview: React.FC<Props> = ({
                           <span>{exp.location || ''}</span>
                         </div>
                       </div>
-
                       <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
                     </div>
                   ))}
                 </div>
               </section>
-            )}
+            ) : null
+          );
 
-            {/* Academic Credentials & Education */}
-            {resume.education && resume.education.length > 0 && (
+          const renderEducation = () => (
+            resume.education && resume.education.length > 0 ? (
               <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
@@ -819,10 +1066,11 @@ export const ResumePreview: React.FC<Props> = ({
                   ))}
                 </div>
               </section>
-            )}
+            ) : null
+          );
 
-            {/* Certifications: Compact horizontal stream */}
-            {resume.certifications && resume.certifications.length > 0 && (
+          const renderCertifications = () => (
+            resume.certifications && resume.certifications.length > 0 ? (
               <section className={sectionMargin}>
                 <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
                   <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
@@ -837,9 +1085,100 @@ export const ResumePreview: React.FC<Props> = ({
                   ))}
                 </div>
               </section>
-            )}
-          </div>
-        )}
+            ) : null
+          );
+
+          const renderProjects = () => (
+            resume.projects && resume.projects.length > 0 ? (
+              <section className={sectionMargin}>
+                <div className={`border-b-2 border-t-2 ${is2PageFit ? 'py-0.5 mb-1' : 'py-0.5 mb-1.5'}`} style={{ borderColor: primaryColor }}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                    Key Strategic Deliverables & Projects
+                  </h2>
+                </div>
+                <div className={jobSpacing}>
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className={is2PageFit ? 'text-[11px]' : 'text-[12px]'}>
+                      <div className="flex items-baseline justify-between break-inside-avoid">
+                        <span className="font-bold text-slate-950">{proj.name}</span>
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <span className="text-[10.5px] text-slate-500 italic">({proj.technologies.join(', ')})</span>
+                        )}
+                      </div>
+                      {proj.description && proj.description !== proj.name && (
+                        <p className="text-slate-700 mt-0.5">{proj.description}</p>
+                      )}
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null
+          );
+
+          return (
+            <div
+              id="resume-printable-area"
+              data-fit-two-pages={is2PageFit ? 'true' : 'false'}
+              className="flex flex-col items-center w-full"
+            >
+              {partition.isMultiPage ? (
+                <>
+                  {/* SHEET 1 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderDoubleLineHeader(false)}
+                      {renderSummary()}
+                      {renderSkills()}
+                      {renderExperience(partition.p1Exp)}
+                    </div>
+                    <SheetFooter pageText="Page 1 of 2" />
+                  </div>
+
+                  {/* VISUAL A4 SHEET BOUNDARY */}
+                  <SheetBoundaryDivider pageNumber={2} />
+
+                  {/* SHEET 2 */}
+                  <div
+                    className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                    style={{ fontFamily: getFontFamily() }}
+                  >
+                    <div>
+                      {renderDoubleLineHeader(true)}
+                      {renderExperience(partition.p2Exp)}
+                      {renderEducation()}
+                      {renderCertifications()}
+                      {renderProjects()}
+                    </div>
+                    <SheetFooter pageText="Page 2 of 2" />
+                  </div>
+                </>
+              ) : (
+                /* SINGLE SHEET */
+                <div
+                  className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] min-h-[1130px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-9'} text-slate-900 leading-normal flex flex-col justify-between`}
+                  style={{ fontFamily: getFontFamily() }}
+                >
+                  <div>
+                    {renderDoubleLineHeader(false)}
+                    {renderSummary()}
+                    {renderSkills()}
+                    {renderExperience(resume.experience)}
+                    {renderEducation()}
+                    {renderCertifications()}
+                    {renderProjects()}
+                  </div>
+                  <SheetFooter pageText="Page 1 of 1" />
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ============================================================ */}
         {/* FORMAT 1: EXECUTIVE TWO-COLUMN (CONSULTING & BIG 4)          */}
@@ -848,7 +1187,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Top Header */}
@@ -990,6 +1329,30 @@ export const ResumePreview: React.FC<Props> = ({
                 </div>
               </section>
             )}
+
+            {/* Key Strategic Deliverables & Projects */}
+            {resume.projects && resume.projects.length > 0 && (
+              <section className="mt-3">
+                <div className={`border-b-2 border-slate-900 ${is2PageFit ? 'pb-0.5 mb-2' : 'pb-1 mb-3'} flex items-center gap-1.5`}>
+                  <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 leading-normal">
+                    Key Strategic Deliverables & Projects
+                  </h2>
+                </div>
+                <div className={jobSpacing}>
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className="text-xs">
+                      <span className="font-bold text-slate-950">{proj.name}</span>
+                      {proj.description && proj.description !== proj.name && (
+                        <p className="text-slate-700 mt-0.5">{proj.description}</p>
+                      )}
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
 
@@ -1000,7 +1363,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
             style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header with modern indigo pill */}
@@ -1125,7 +1488,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Header: Centered, High Density */}
@@ -1170,6 +1533,32 @@ export const ResumePreview: React.FC<Props> = ({
                         <span>{exp.location}</span>
                       </div>
                       <BulletList bullets={exp.bullets} bulletSpacing="mt-1 space-y-0.5" fontSizeClass="text-xs text-slate-900" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Projects & Deliverables */}
+            {resume.projects && resume.projects.length > 0 && (
+              <section className="mb-3">
+                <div className="border-b border-slate-900 pb-1 mb-1.5">
+                  <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-950 leading-normal">
+                    Key Projects & Deliverables
+                  </h2>
+                </div>
+                <div className="space-y-2 text-xs">
+                  {resume.projects.map(proj => (
+                    <div key={proj.id}>
+                      <div className="flex justify-between font-bold">
+                        <span>{proj.name}</span>
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <span className="font-normal italic">({proj.technologies.join(', ')})</span>
+                        )}
+                      </div>
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing="mt-0.5 space-y-0.5" fontSizeClass="text-xs text-slate-900" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1240,7 +1629,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
             style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Tech Header */}
@@ -1292,6 +1681,30 @@ export const ResumePreview: React.FC<Props> = ({
                         </span>
                       </div>
                       <BulletList bullets={exp.bullets} bulletSpacing="mt-1 space-y-1" fontSizeClass="text-xs text-slate-700 leading-relaxed" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Projects */}
+            {resume.projects && resume.projects.length > 0 && (
+              <section className="mb-4">
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  // Projects & Deliverables
+                </h2>
+                <div className="space-y-3">
+                  {resume.projects.map(proj => (
+                    <div key={proj.id} className="border-l-2 border-slate-200 pl-3">
+                      <div className="text-xs font-bold text-slate-900">
+                        {proj.name} {proj.technologies && proj.technologies.length > 0 && <span className="font-mono text-primary-600 font-normal">[{proj.technologies.join(', ')}]</span>}
+                      </div>
+                      {proj.description && proj.description !== proj.name && (
+                        <p className="text-xs text-slate-700 mt-0.5">{proj.description}</p>
+                      )}
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing="mt-1 space-y-1" fontSizeClass="text-xs text-slate-700" />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1362,7 +1775,7 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
               template === 'harvard' ? 'font-serif' : 'font-sans'
             }`}
             style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
@@ -1441,6 +1854,35 @@ export const ResumePreview: React.FC<Props> = ({
                       </div>
 
                       <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Projects & Deliverables */}
+            {resume.projects && resume.projects.length > 0 && (
+              <section className={sectionMargin}>
+                <div className={`border-b border-slate-400 ${is2PageFit ? 'pb-0.5 mb-1' : 'pb-1 mb-2'}`}>
+                  <h2 className={`${is2PageFit ? 'text-[11px]' : 'text-xs'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
+                    Key Strategic Deliverables & Projects
+                  </h2>
+                </div>
+                <div className={jobSpacing}>
+                  {resume.projects.map((proj) => (
+                    <div key={proj.id} className={getFontSizeClass()}>
+                      <div className="flex items-baseline justify-between">
+                        <span className="font-bold text-slate-950">{proj.name}</span>
+                        {proj.technologies && proj.technologies.length > 0 && (
+                          <span className="text-slate-600 text-[11px] italic">({proj.technologies.join(', ')})</span>
+                        )}
+                      </div>
+                      {proj.description && proj.description !== proj.name && (
+                        <p className="text-slate-800 mt-0.5">{proj.description}</p>
+                      )}
+                      {proj.bullets && proj.bullets.length > 0 && (
+                        <BulletList bullets={proj.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
+                      )}
                     </div>
                   ))}
                 </div>

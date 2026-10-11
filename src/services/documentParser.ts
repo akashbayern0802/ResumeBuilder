@@ -379,10 +379,6 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
   const allExpLines = expSections.flatMap(s => s.content);
   const expEntries: WorkExperience[] = [];
   let currentExp: WorkExperience | null = null;
-  let pendingBullet = false;
-
-  const bulletRegex = /^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022]\s*/;
-  const isBulletCharOnly = (s: string) => /^[\s\t]*[•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022][\s\t]*$/.test(s);
 
   // Regex for dates at start of role:
   // "03/2025 - Present Lead Product Manager" or "07/2021 - 02/2025 Product Owner" or "2019 - 2021 Senior Product Manager"
@@ -411,7 +407,6 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         current: dates.toLowerCase().includes('present') || dates.toLowerCase().includes('since'),
         bullets: []
       };
-      pendingBullet = false;
     } else if (match) {
       if (currentExp) expEntries.push(currentExp);
       const dates = match[1].trim();
@@ -419,7 +414,7 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
       let company = '';
 
       // The next line may be the company name if it's not a bullet or new date
-      if (i + 1 < allExpLines.length && !allExpLines[i + 1].startsWith('•') && !allExpLines[i + 1].startsWith('-') && !allExpLines[i + 1].startsWith('*') && !allExpLines[i + 1].match(dateRoleRegex)) {
+      if (i + 1 < allExpLines.length && !allExpLines[i + 1].startsWith('•') && !allExpLines[i + 1].startsWith('-') && !allExpLines[i + 1].match(dateRoleRegex)) {
         company = allExpLines[i + 1];
         i++; // Consume company line
       }
@@ -440,21 +435,23 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
         current: dates.toLowerCase().includes('present'),
         bullets: []
       };
-      pendingBullet = false;
     } else if (currentExp) {
-      if (isBulletCharOnly(line)) {
-        pendingBullet = true;
-        continue;
-      }
-      if (bulletRegex.test(line) || pendingBullet) {
-        const cleanBullet = line.replace(bulletRegex, '').trim();
-        if (cleanBullet.length > 5) {
-          currentExp.bullets.push(cleanBullet);
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+
+      // Match bullet glyphs (•, -, *, ▪, ▸, –, —, \uF0B7, \u25CF, etc.) or numbered lists (1., 1))
+      const bulletMatch = trimmed.match(/^([•\-*▪▸–—\uF0B7\u25CF\u25AA\u25BA\u2022\u25E6]|\d+[.)])\s*(.*)$/);
+      if (bulletMatch) {
+        const bulletText = bulletMatch[2].trim();
+        if (bulletText.length > 0) {
+          currentExp.bullets.push(bulletText);
         }
-        pendingBullet = false;
       } else if (currentExp.bullets.length > 0) {
-        // Wrapped bullet line from previous item
-        currentExp.bullets[currentExp.bullets.length - 1] += ' ' + line;
+        // Wrapped continuation line belonging to previous bullet point
+        currentExp.bullets[currentExp.bullets.length - 1] += ' ' + trimmed;
+      } else if (trimmed.length > 10 && !trimmed.toLowerCase().includes('responsibilities:')) {
+        // First bullet point even if bullet character was omitted in PDF text stream
+        currentExp.bullets.push(trimmed);
       }
     }
   }
@@ -573,30 +570,14 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
 
     if (curAch) achievements.push(curAch);
 
-    // Populate projects list
+    // Populate projects / deliverables list with key career achievements
     resume.projects = achievements.map((ach, idx) => ({
       id: `proj-${Date.now()}-${idx}`,
-      name: `${ach.company} Milestone`,
+      name: ach.company ? `${ach.company} Impact & Key Highlight` : `Career Milestone ${idx + 1}`,
       description: ach.text,
       technologies: [],
       bullets: [ach.text]
     }));
-
-    // Attach achievements to matching company experience bullets as key highlights
-    if (resume.experience.length > 0) {
-      resume.experience = resume.experience.map(exp => {
-        const matched = achievements.filter(ach =>
-          ach.company && exp.company.toLowerCase().includes(ach.company.toLowerCase())
-        );
-        if (matched.length > 0) {
-          return {
-            ...exp,
-            bullets: [...exp.bullets, ...matched.map(m => `Key Achievement: ${m.text}`)]
-          };
-        }
-        return exp;
-      });
-    }
   }
 
   return resume;
