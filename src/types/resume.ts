@@ -19,6 +19,46 @@ export interface Education {
   honors?: string;
 }
 
+export type AchievementIconType =
+  | 'trophy'
+  | 'award'
+  | 'barchart'
+  | 'trending'
+  | 'gem'
+  | 'rocket'
+  | 'target'
+  | 'star'
+  | 'sparkles'
+  | 'briefcase'
+  | 'globe'
+  | 'zap'
+  | 'shield'
+  | 'check';
+
+export interface AchievementItem {
+  id: string;
+  title: string;
+  description: string;
+  icon?: AchievementIconType;
+}
+
+export interface CustomSectionItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  date?: string;
+  description?: string;
+  bullets?: string[];
+  icon?: AchievementIconType;
+}
+
+export interface CustomSection {
+  id: string;
+  title: string;
+  icon?: AchievementIconType;
+  items: CustomSectionItem[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -26,6 +66,7 @@ export interface Project {
   technologies: string[];
   link?: string;
   bullets: string[];
+  icon?: AchievementIconType;
 }
 
 export interface SkillCategory {
@@ -34,7 +75,15 @@ export interface SkillCategory {
   skills: string[];
 }
 
-export type ResumeSectionId = 'summary' | 'experience' | 'skills' | 'education' | 'projects' | 'certifications';
+export type ResumeSectionId =
+  | 'summary'
+  | 'experience'
+  | 'skills'
+  | 'education'
+  | 'projects'
+  | 'certifications'
+  | 'achievements'
+  | string;
 
 export interface ResumeDesignSettings {
   fontFamily: 'inter' | 'roboto' | 'merriweather' | 'playfair' | 'garamond' | 'sans';
@@ -62,6 +111,8 @@ export interface ResumeData {
   education: Education[];
   projects: Project[];
   certifications?: string[];
+  achievements?: AchievementItem[];
+  customSections?: CustomSection[];
   totalExperience?: string;
   preferredLocations?: string;
   sectionOrder?: ResumeSectionId[];

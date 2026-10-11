@@ -16,15 +16,13 @@ import {
   Phone,
   MapPin,
   Trophy,
-  BarChart3,
   TrendingUp,
-  Gem,
-  Rocket,
   Sparkles,
   CheckCircle2,
   Calendar,
   Layers
 } from 'lucide-react';
+import { renderAchievementIcon } from './IconPicker';
 
 const LinkedInIcon = ({ className = "w-3 h-3 text-amber-700 shrink-0" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -42,7 +40,7 @@ const cleanBulletText = (text: string) => {
 export function partitionResumeContent(resume: ResumeData, is2PageFit: boolean) {
   const experiences = resume.experience || [];
   const totalBullets = experiences.reduce((sum, e) => sum + (e.bullets?.length || 0), 0);
-  const projectsCount = resume.projects?.length || 0;
+  const projectsCount = (resume.achievements?.length || 0) + (resume.projects?.length || 0) + (resume.customSections?.length || 0);
   const certsCount = resume.certifications?.length || 0;
 
   // Detect if resume spans 2 distinct A4 pages
@@ -598,36 +596,78 @@ export const ResumePreview: React.FC<Props> = ({
             ) : null
           );
 
-          const renderEnhancvAchievements = () => (
-            resume.projects && resume.projects.length > 0 ? (
+          const renderEnhancvAchievements = () => {
+            const achList = (resume.achievements && resume.achievements.length > 0)
+              ? resume.achievements
+              : (resume.projects && resume.projects.length > 0)
+                ? resume.projects.map((p, idx) => {
+                    const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
+                    return {
+                      id: p.id,
+                      title: p.name.replace(/ Milestone$/i, ''),
+                      description: p.description || p.bullets?.[0] || '',
+                      icon: p.icon || defaultIcons[idx % defaultIcons.length]
+                    };
+                  })
+                : [];
+
+            if (achList.length === 0) return null;
+
+            return (
               <section className={`${is2PageFit ? 'mb-2' : 'mb-2.5'}`}>
                 <h2 className="text-xs font-black uppercase tracking-wider text-slate-950 border-b border-slate-950 pb-0.5 mb-2">
                   KEY ACHIEVEMENTS
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                  {resume.projects.map((proj, idx) => {
-                    const achievementIcons = [
-                      <Trophy className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
-                      <BarChart3 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />,
-                      <TrendingUp className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
-                      <Gem className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />,
-                      <Rocket className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    ];
-                    const icon = achievementIcons[idx % achievementIcons.length];
-                    return (
-                      <div key={proj.id} className="flex items-start gap-2 p-2 rounded bg-slate-50 border border-slate-200/80">
-                        {icon}
-                        <div className="text-[11px] leading-snug text-slate-800">
-                          <strong className="text-slate-950 font-bold">{proj.name}: </strong>
-                          <span>{proj.description || proj.bullets?.[0] || ''}</span>
-                        </div>
+                  {achList.map((ach) => (
+                    <div key={ach.id} className="flex items-start gap-2 p-2 rounded bg-slate-50 border border-slate-200/80">
+                      {renderAchievementIcon(ach.icon, "w-4 h-4 text-amber-600 shrink-0 mt-0.5")}
+                      <div className="text-[11px] leading-snug text-slate-800">
+                        <strong className="text-slate-950 font-bold">{ach.title}: </strong>
+                        <span>{ach.description}</span>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </section>
-            ) : null
-          );
+            );
+          };
+
+          const renderEnhancvCustomSections = () => {
+            if (!resume.customSections || resume.customSections.length === 0) return null;
+            return (
+              <>
+                {resume.customSections.map((cs) => {
+                  if ((resume.hiddenSections || []).includes(cs.id)) return null;
+                  return (
+                    <section key={cs.id} className={`${is2PageFit ? 'mb-2' : 'mb-2.5'}`}>
+                      <div className="flex items-center gap-1.5 border-b border-slate-950 pb-0.5 mb-2">
+                        {renderAchievementIcon(cs.icon || 'sparkles', "w-3.5 h-3.5 text-amber-600 shrink-0")}
+                        <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                          {cs.title}
+                        </h2>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {cs.items.map((it) => (
+                          <div key={it.id} className="p-2 rounded bg-slate-50 border border-slate-200/80">
+                            <div className="flex items-baseline gap-1.5">
+                              {renderAchievementIcon(it.icon || 'check', "w-3 h-3 text-amber-600 shrink-0")}
+                              <span className="font-bold text-slate-950 text-[11px]">{it.title}</span>
+                              {it.subtitle && <span className="text-[10px] text-amber-700 font-semibold">— {it.subtitle}</span>}
+                              {it.date && <span className="text-[10px] text-slate-400 italic ml-auto">{it.date}</span>}
+                            </div>
+                            {it.description && (
+                              <p className="text-[10.5px] text-slate-700 mt-0.5 leading-snug pl-4.5">{it.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </>
+            );
+          };
 
           return (
             <div
@@ -662,6 +702,7 @@ export const ResumePreview: React.FC<Props> = ({
                     {renderEnhancvEducation()}
                     {renderEnhancvCertifications()}
                     {renderEnhancvAchievements()}
+                    {renderEnhancvCustomSections()}
                     <SheetFooter pageText="Page 2 of 2" />
                   </div>
                 </>
@@ -678,6 +719,7 @@ export const ResumePreview: React.FC<Props> = ({
                   {renderEnhancvEducation()}
                   {renderEnhancvCertifications()}
                   {renderEnhancvAchievements()}
+                  {renderEnhancvCustomSections()}
                   <SheetFooter pageText="Page 1 of 1" />
                 </div>
               )}
@@ -898,8 +940,24 @@ export const ResumePreview: React.FC<Props> = ({
             ) : null
           );
 
-          const renderGraphicalAchievements = () => (
-            resume.projects && resume.projects.length > 0 ? (
+          const renderGraphicalAchievements = () => {
+            const achList = (resume.achievements && resume.achievements.length > 0)
+              ? resume.achievements
+              : (resume.projects && resume.projects.length > 0)
+                ? resume.projects.map((p, idx) => {
+                    const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
+                    return {
+                      id: p.id,
+                      title: p.name.replace(/ Milestone$/i, ''),
+                      description: p.description || p.bullets?.[0] || '',
+                      icon: p.icon || defaultIcons[idx % defaultIcons.length]
+                    };
+                  })
+                : [];
+
+            if (achList.length === 0) return null;
+
+            return (
               <section className="mb-2">
                 <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
                   <Trophy className="w-3.5 h-3.5 text-slate-700" />
@@ -908,18 +966,57 @@ export const ResumePreview: React.FC<Props> = ({
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {resume.projects.map((proj) => (
-                    <div key={proj.id} className="border-l-4 border-amber-500 bg-amber-50/40 p-2 rounded-r border border-slate-200">
-                      <span className="font-bold text-slate-950 block">{proj.name}</span>
-                      <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">
-                        {proj.description || proj.bullets?.[0] || ''}
-                      </p>
+                  {achList.map((ach) => (
+                    <div key={ach.id} className="border-l-4 border-amber-500 bg-amber-50/40 p-2 rounded-r border border-slate-200 flex items-start gap-2">
+                      {renderAchievementIcon(ach.icon, "w-4 h-4 text-amber-600 shrink-0 mt-0.5")}
+                      <div>
+                        <span className="font-bold text-slate-950 block">{ach.title}</span>
+                        <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">
+                          {ach.description}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </section>
-            ) : null
-          );
+            );
+          };
+
+          const renderGraphicalCustomSections = () => {
+            if (!resume.customSections || resume.customSections.length === 0) return null;
+            return (
+              <>
+                {resume.customSections.map((cs) => {
+                  if ((resume.hiddenSections || []).includes(cs.id)) return null;
+                  return (
+                    <section key={cs.id} className="mb-2">
+                      <div className="flex items-center gap-1.5 border-b-2 border-slate-900 pb-0.5 mb-2">
+                        {renderAchievementIcon(cs.icon || 'sparkles', "w-3.5 h-3.5 text-indigo-600 shrink-0")}
+                        <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
+                          {cs.title}
+                        </h2>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        {cs.items.map((it) => (
+                          <div key={it.id} className="border-l-4 border-indigo-500 bg-indigo-50/40 p-2 rounded-r border border-slate-200">
+                            <div className="flex items-baseline gap-1.5">
+                              {renderAchievementIcon(it.icon || 'check', "w-3 h-3 text-indigo-600 shrink-0")}
+                              <span className="font-bold text-slate-950 text-[11px]">{it.title}</span>
+                              {it.subtitle && <span className="text-[10px] text-indigo-700 font-semibold">— {it.subtitle}</span>}
+                              {it.date && <span className="text-[10px] text-slate-400 italic ml-auto">{it.date}</span>}
+                            </div>
+                            {it.description && (
+                              <p className="text-[10.5px] text-slate-700 mt-0.5 leading-snug pl-4.5">{it.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+              </>
+            );
+          };
 
           return (
             <div
@@ -954,6 +1051,7 @@ export const ResumePreview: React.FC<Props> = ({
                     {renderGraphicalEducation()}
                     {renderGraphicalCertifications()}
                     {renderGraphicalAchievements()}
+                    {renderGraphicalCustomSections()}
                     <SheetFooter pageText="Page 2 of 2" />
                   </div>
                 </>
@@ -970,6 +1068,7 @@ export const ResumePreview: React.FC<Props> = ({
                   {renderGraphicalEducation()}
                   {renderGraphicalCertifications()}
                   {renderGraphicalAchievements()}
+                  {renderGraphicalCustomSections()}
                   <SheetFooter pageText="Page 1 of 1" />
                 </div>
               )}

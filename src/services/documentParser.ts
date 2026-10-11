@@ -562,13 +562,25 @@ export function parseExtractedTextToResume(rawText: string, filename?: string): 
 
     if (curAch) achievements.push(curAch);
 
-    // Populate projects list
+    // Populate achievements and projects list
+    const defaultIcons: ('trophy' | 'award' | 'barchart' | 'trending' | 'gem' | 'rocket' | 'target')[] = [
+      'award', 'barchart', 'trending', 'gem', 'rocket', 'target', 'trophy'
+    ];
+
+    resume.achievements = achievements.map((ach, idx) => ({
+      id: `ach-${Date.now()}-${idx}`,
+      title: `${ach.company}`,
+      description: ach.text,
+      icon: defaultIcons[idx % defaultIcons.length]
+    }));
+
     resume.projects = achievements.map((ach, idx) => ({
       id: `proj-${Date.now()}-${idx}`,
       name: `${ach.company} Milestone`,
       description: ach.text,
       technologies: [],
-      bullets: [ach.text]
+      bullets: [ach.text],
+      icon: defaultIcons[idx % defaultIcons.length]
     }));
 
     // Attach achievements to matching company experience bullets as key highlights

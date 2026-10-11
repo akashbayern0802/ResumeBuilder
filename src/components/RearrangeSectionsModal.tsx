@@ -14,8 +14,10 @@ import {
   GraduationCap,
   Award,
   FolderGit2,
-  GripVertical
+  GripVertical,
+  Trophy
 } from 'lucide-react';
+import { renderAchievementIcon } from './IconPicker';
 
 interface Props {
   isOpen: boolean;
@@ -38,7 +40,8 @@ export const DEFAULT_SECTION_ORDER: ResumeSectionId[] = [
   'experience',
   'education',
   'certifications',
-  'projects'
+  'projects',
+  'achievements'
 ];
 
 export const RearrangeSectionsModal: React.FC<Props> = ({
@@ -47,18 +50,22 @@ export const RearrangeSectionsModal: React.FC<Props> = ({
   resume,
   onChange
 }) => {
-  const currentOrder = resume.sectionOrder && resume.sectionOrder.length > 0
-    ? resume.sectionOrder
-    : DEFAULT_SECTION_ORDER;
+  const allSectionIds = [
+    ...DEFAULT_SECTION_ORDER,
+    ...(resume.customSections || []).map(cs => cs.id)
+  ];
+  const initialOrder = resume.sectionOrder && resume.sectionOrder.length > 0
+    ? Array.from(new Set([...resume.sectionOrder, ...allSectionIds]))
+    : allSectionIds;
 
   const currentHidden = resume.hiddenSections || [];
 
-  const [order, setOrder] = useState<ResumeSectionId[]>(currentOrder);
+  const [order, setOrder] = useState<ResumeSectionId[]>(initialOrder);
   const [hidden, setHidden] = useState<ResumeSectionId[]>(currentHidden);
 
   if (!isOpen) return null;
 
-  const sectionDetails: Record<ResumeSectionId, SectionMeta> = {
+  const sectionDetails: Record<string, SectionMeta> = {
     summary: {
       id: 'summary',
       label: 'Executive Profile Summary',
@@ -100,8 +107,28 @@ export const RearrangeSectionsModal: React.FC<Props> = ({
       description: 'Key strategic initiatives, open-source or enterprise solutions',
       icon: <FolderGit2 className="w-4 h-4 text-rose-500" />,
       itemCount: resume.projects ? resume.projects.length : 0
+    },
+    achievements: {
+      id: 'achievements',
+      label: 'Key Achievements & Milestones',
+      description: 'Awards, high-impact business metrics, and leadership recognitions',
+      icon: <Trophy className="w-4 h-4 text-amber-500" />,
+      itemCount: resume.achievements ? resume.achievements.length : (resume.projects ? resume.projects.length : 0)
     }
   };
+
+  // Add custom sections dynamically
+  if (resume.customSections) {
+    resume.customSections.forEach(cs => {
+      sectionDetails[cs.id] = {
+        id: cs.id,
+        label: cs.title,
+        description: 'Custom added section with milestone items',
+        icon: renderAchievementIcon(cs.icon || 'sparkles', "w-4 h-4 text-indigo-500"),
+        itemCount: cs.items?.length || 0
+      };
+    });
+  }
 
   const handleMoveUp = (index: number) => {
     if (index === 0) return;

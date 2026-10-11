@@ -1,5 +1,15 @@
-import React, { useState } from 'react';
-import { ResumeData, WorkExperience, Education, Project, SkillCategory } from '../types/resume';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  ResumeData,
+  WorkExperience,
+  Education,
+  Project,
+  SkillCategory,
+  AchievementItem,
+  CustomSection,
+  CustomSectionItem,
+  AchievementIconType
+} from '../types/resume';
 import {
   User,
   Briefcase,
@@ -17,9 +27,14 @@ import {
   Maximize2,
   Minimize2,
   ArrowUpDown,
-  Palette
+  Palette,
+  Trophy,
+  Globe,
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { extractTextFromFile, parseExtractedTextToResume } from '../services/documentParser';
+import { IconPicker, renderAchievementIcon } from './IconPicker';
 
 interface Props {
   resume: ResumeData;
@@ -30,7 +45,16 @@ interface Props {
   onOpenDesign?: () => void;
 }
 
-type TabType = 'contact' | 'summary' | 'experience' | 'skills' | 'certifications' | 'education' | 'projects';
+type TabType =
+  | 'contact'
+  | 'summary'
+  | 'experience'
+  | 'skills'
+  | 'certifications'
+  | 'education'
+  | 'projects'
+  | 'achievements'
+  | string;
 
 export const ResumeEditor: React.FC<Props> = ({
   resume,
@@ -247,6 +271,164 @@ export const ResumeEditor: React.FC<Props> = ({
     });
   };
 
+  const [isAddSectionOpen, setIsAddSectionOpen] = useState(false);
+  const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
+  const [customSectionTitle, setCustomSectionTitle] = useState('');
+  const addSectionDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (addSectionDropdownRef.current && !addSectionDropdownRef.current.contains(e.target as Node)) {
+        setIsAddSectionOpen(false);
+      }
+    };
+    if (isAddSectionOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAddSectionOpen]);
+
+  // Compute effective achievements list (syncs with parsed project milestones if achievements is not yet explicitly set)
+  const effectiveAchievements: AchievementItem[] = (resume.achievements && resume.achievements.length > 0)
+    ? resume.achievements
+    : (resume.projects && resume.projects.length > 0 && resume.projects.some(p => p.name.includes('Milestone') || p.name.includes('PwC') || p.name.includes('Accenture') || p.name.includes('Lodha') || p.name.includes('ICICI')))
+      ? resume.projects.map((p, idx) => {
+          const defaultIcons: AchievementIconType[] = ['award', 'barchart', 'trending', 'gem', 'rocket', 'target', 'trophy'];
+          return {
+            id: p.id || `ach-${idx}`,
+            title: p.name.replace(/ Milestone$/i, ''),
+            description: p.description || p.bullets?.[0] || '',
+            icon: p.icon || defaultIcons[idx % defaultIcons.length]
+          };
+        })
+      : [];
+
+  // Achievements handlers
+  const handleAddAchievement = () => {
+    const newAch: AchievementItem = {
+      id: `ach-${Date.now()}`,
+      title: 'Company / Award Name',
+      description: 'Highlight key quantifiable milestone, annual award, or client transformation deliverable...',
+      icon: 'trophy'
+    };
+    onChange({
+      ...resume,
+      achievements: [...effectiveAchievements, newAch]
+    });
+  };
+
+  const handleUpdateAchievement = (id: string, field: keyof AchievementItem, val: any) => {
+    onChange({
+      ...resume,
+      achievements: effectiveAchievements.map(a => a.id === id ? { ...a, [field]: val } : a)
+    });
+  };
+
+  const handleDeleteAchievement = (id: string) => {
+    onChange({
+      ...resume,
+      achievements: effectiveAchievements.filter(a => a.id !== id)
+    });
+  };
+
+  // Custom Section handlers
+  const handleAddCustomSection = (title: string, icon: AchievementIconType = 'sparkles') => {
+    const newSec: CustomSection = {
+      id: `custom-${Date.now()}`,
+      title: title.trim() || 'Custom Section',
+      icon,
+      items: [
+        {
+          id: `item-${Date.now()}`,
+          title: 'New Entry / Milestone',
+          subtitle: 'Organization / Issuer',
+          description: 'Details and impact of this entry...',
+          icon: 'check'
+        }
+      ]
+    };
+    const currentSecs = resume.customSections || [];
+    const currentOrder = resume.sectionOrder || [
+      'summary',
+      'skills',
+      'experience',
+      'education',
+      'certifications',
+      'projects',
+      'achievements'
+    ];
+    onChange({
+      ...resume,
+      customSections: [...currentSecs, newSec],
+      sectionOrder: [...currentOrder, newSec.id]
+    });
+    setActiveTab(newSec.id);
+    setIsAddSectionOpen(false);
+    setIsCustomInputOpen(false);
+    setCustomSectionTitle('');
+  };
+
+  const handleUpdateCustomSection = (secId: string, field: keyof CustomSection, val: any) => {
+    const currentSecs = resume.customSections || [];
+    onChange({
+      ...resume,
+      customSections: currentSecs.map(s => s.id === secId ? { ...s, [field]: val } : s)
+    });
+  };
+
+  const handleDeleteCustomSection = (secId: string) => {
+    const currentSecs = resume.customSections || [];
+    const currentOrder = resume.sectionOrder || [];
+    onChange({
+      ...resume,
+      customSections: currentSecs.filter(s => s.id !== secId),
+      sectionOrder: currentOrder.filter(id => id !== secId)
+    });
+    setActiveTab('experience');
+  };
+
+  const handleAddCustomItem = (secId: string) => {
+    const currentSecs = resume.customSections || [];
+    const newItem: CustomSectionItem = {
+      id: `item-${Date.now()}`,
+      title: 'New Entry',
+      subtitle: '',
+      description: '',
+      icon: 'check'
+    };
+    onChange({
+      ...resume,
+      customSections: currentSecs.map(s => s.id === secId ? {
+        ...s,
+        items: [...s.items, newItem]
+      } : s)
+    });
+  };
+
+  const handleUpdateCustomItem = (secId: string, itemId: string, field: keyof CustomSectionItem, val: any) => {
+    const currentSecs = resume.customSections || [];
+    onChange({
+      ...resume,
+      customSections: currentSecs.map(s => s.id === secId ? {
+        ...s,
+        items: s.items.map(it => it.id === itemId ? { ...it, [field]: val } : it)
+      } : s)
+    });
+  };
+
+  const handleDeleteCustomItem = (secId: string, itemId: string) => {
+    const currentSecs = resume.customSections || [];
+    onChange({
+      ...resume,
+      customSections: currentSecs.map(s => s.id === secId ? {
+        ...s,
+        items: s.items.filter(it => it.id !== itemId)
+      } : s)
+    });
+  };
+
   const handleDeleteEducation = (id: string) => {
     onChange({
       ...resume,
@@ -382,8 +564,39 @@ export const ResumeEditor: React.FC<Props> = ({
           }`}
         >
           <GraduationCap className="w-3.5 h-3.5" />
-          <span>Education</span>
+          <span>Education ({resume.education.length})</span>
         </button>
+
+        {/* KEY ACHIEVEMENTS TAB */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('achievements')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+            activeTab === 'achievements'
+              ? 'bg-white text-amber-900 shadow-xs font-semibold border border-amber-200'
+              : 'text-slate-600 hover:text-amber-800 hover:bg-amber-50/50'
+          }`}
+        >
+          <Trophy className="w-3.5 h-3.5 text-amber-600" />
+          <span>Achievements ({effectiveAchievements.length})</span>
+        </button>
+
+        {/* DYNAMIC CUSTOM SECTIONS TABS */}
+        {resume.customSections?.map(cs => (
+          <button
+            key={cs.id}
+            type="button"
+            onClick={() => setActiveTab(cs.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
+              activeTab === cs.id
+                ? 'bg-white text-indigo-900 shadow-xs font-semibold border border-indigo-200'
+                : 'text-slate-600 hover:text-indigo-800 hover:bg-indigo-50/50'
+            }`}
+          >
+            {renderAchievementIcon(cs.icon || 'sparkles', "w-3.5 h-3.5 shrink-0")}
+            <span>{cs.title} ({cs.items?.length || 0})</span>
+          </button>
+        ))}
 
         <button
           type="button"
@@ -397,6 +610,125 @@ export const ResumeEditor: React.FC<Props> = ({
           <User className="w-3.5 h-3.5" />
           <span>Personal Info</span>
         </button>
+
+        {/* + ADD SECTION DROPDOWN BUTTON */}
+        <div className="relative inline-block ml-1" ref={addSectionDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsAddSectionOpen(!isAddSectionOpen)}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 rounded-lg transition-all shadow-2xs cursor-pointer whitespace-nowrap"
+            title="Add a new section to your resume"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Section</span>
+          </button>
+
+          {isAddSectionOpen && (
+            <div className="absolute left-0 mt-1 z-50 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-2 text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 border-b border-slate-100 mb-1">
+                Add Section to Resume
+              </div>
+
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('achievements');
+                    if (effectiveAchievements.length === 0) {
+                      handleAddAchievement();
+                    }
+                    setIsAddSectionOpen(false);
+                  }}
+                  className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-amber-50/70 text-left transition-colors cursor-pointer"
+                >
+                  <Trophy className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-slate-900">Key Achievements & Milestones</div>
+                    <div className="text-[10.5px] text-slate-500">Awards, recognitions, and major business metrics with custom icons</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAddCustomSection('Languages & Fluency', 'globe')}
+                  className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-cyan-50/70 text-left transition-colors cursor-pointer"
+                >
+                  <Globe className="w-4 h-4 text-cyan-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-slate-900">Languages & Fluency</div>
+                    <div className="text-[10.5px] text-slate-500">Multilingual proficiency (English, Hindi, German, etc.)</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAddCustomSection('Publications & Patents', 'sparkles')}
+                  className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-indigo-50/70 text-left transition-colors cursor-pointer"
+                >
+                  <BookOpen className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-slate-900">Publications & Patents</div>
+                    <div className="text-[10.5px] text-slate-500">Research papers, journals, articles, or patents</div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleAddCustomSection('Volunteer & Community', 'sparkles')}
+                  className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-emerald-50/70 text-left transition-colors cursor-pointer"
+                >
+                  <Users className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-slate-900">Volunteer & Community Leadership</div>
+                    <div className="text-[10.5px] text-slate-500">Mentorship, non-profit initiatives, or leadership work</div>
+                  </div>
+                </button>
+
+                {/* CUSTOM SECTION INLINE CREATOR */}
+                {isCustomInputOpen ? (
+                  <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 mt-1">
+                    <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Section Name</label>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        value={customSectionTitle}
+                        onChange={(e) => setCustomSectionTitle(e.target.value)}
+                        placeholder="e.g. Speaking & Conferences"
+                        className="flex-1 px-2 py-1 text-xs bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && customSectionTitle.trim()) {
+                            handleAddCustomSection(customSectionTitle);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (customSectionTitle.trim()) {
+                            handleAddCustomSection(customSectionTitle);
+                          }
+                        }}
+                        className="px-2.5 py-1 bg-indigo-600 text-white rounded font-bold text-xs hover:bg-indigo-700 cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomInputOpen(true)}
+                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-slate-100 text-left text-slate-700 font-semibold transition-colors cursor-pointer border-t border-slate-100 mt-1"
+                  >
+                    <Plus className="w-4 h-4 text-slate-500" />
+                    <span>Create Custom Section...</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Upload Resume File shortcut */}
         <input
@@ -754,13 +1086,20 @@ export const ResumeEditor: React.FC<Props> = ({
             {resume.projects.map((proj) => (
               <div key={proj.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <input
-                    type="text"
-                    value={proj.name}
-                    onChange={(e) => handleUpdateProject(proj.id, 'name', e.target.value)}
-                    placeholder="Project Name"
-                    className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
-                  />
+                  <div className="flex items-center gap-2 flex-1">
+                    <IconPicker
+                      value={proj.icon || 'trophy'}
+                      onChange={(icon) => handleUpdateProject(proj.id, 'icon', icon)}
+                      title="Choose Project Icon"
+                    />
+                    <input
+                      type="text"
+                      value={proj.name}
+                      onChange={(e) => handleUpdateProject(proj.id, 'name', e.target.value)}
+                      placeholder="Project Name"
+                      className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDeleteProject(proj.id)}
@@ -863,6 +1202,201 @@ export const ResumeEditor: React.FC<Props> = ({
             ))}
           </div>
         )}
+
+        {/* TAB: KEY ACHIEVEMENTS & MILESTONES */}
+        {activeTab === 'achievements' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-medium">
+                Highlight major quantifiable career milestones, promotions, and leadership awards with custom icons
+              </span>
+              <button
+                type="button"
+                onClick={handleAddAchievement}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors shadow-2xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Achievement</span>
+              </button>
+            </div>
+
+            {effectiveAchievements.length === 0 ? (
+              <div className="text-center p-8 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                <Trophy className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-80" />
+                <p className="text-xs font-bold text-slate-800">No Key Achievements Yet</p>
+                <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-1 mb-3">
+                  Add major career milestones (e.g. "Won Ace Award", "Scaled 120M Monthly Volume", "Reduced lead time by 80%").
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddAchievement}
+                  className="px-3 py-1.5 bg-amber-600 text-white text-xs font-bold rounded-lg hover:bg-amber-700 shadow-2xs cursor-pointer"
+                >
+                  + Add First Achievement
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {effectiveAchievements.map((ach) => (
+                  <div key={ach.id} className="border border-amber-200/80 rounded-xl p-3.5 bg-amber-50/20 space-y-2.5 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <IconPicker
+                          value={ach.icon || 'trophy'}
+                          onChange={(icon) => handleUpdateAchievement(ach.id, 'icon', icon)}
+                          title="Pick Achievement Icon"
+                        />
+                        <input
+                          type="text"
+                          value={ach.title}
+                          onChange={(e) => handleUpdateAchievement(ach.id, 'title', e.target.value)}
+                          placeholder="Organization / Company / Award Title (e.g. PwC, ICICI Bank, Accenture)"
+                          className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAchievement(ach.id)}
+                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                        title="Delete Achievement"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Milestone Description & Metrics</label>
+                      <textarea
+                        rows={2}
+                        value={ach.description}
+                        onChange={(e) => handleUpdateAchievement(ach.id, 'description', e.target.value)}
+                        placeholder="e.g. Awarded Business Services Delivery Annual Award for championing customer-first transformation..."
+                        className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-slate-800"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* DYNAMIC CUSTOM SECTIONS PANES */}
+        {resume.customSections?.map((cs) => {
+          if (activeTab !== cs.id) return null;
+          return (
+            <div key={cs.id} className="space-y-4">
+              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-2 flex-1">
+                  <IconPicker
+                    value={cs.icon || 'sparkles'}
+                    onChange={(icon) => handleUpdateCustomSection(cs.id, 'icon', icon)}
+                    title="Section Icon"
+                  />
+                  <input
+                    type="text"
+                    value={cs.title}
+                    onChange={(e) => handleUpdateCustomSection(cs.id, 'title', e.target.value)}
+                    placeholder="Section Title"
+                    className="font-bold text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1 max-w-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAddCustomItem(cs.id)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Entry</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteCustomSection(cs.id)}
+                    className="text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    title="Delete this entire section"
+                  >
+                    Delete Section
+                  </button>
+                </div>
+              </div>
+
+              {cs.items.length === 0 ? (
+                <div className="text-center p-8 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                  <p className="text-xs font-semibold text-slate-600 mb-2">No entries in this section yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => handleAddCustomItem(cs.id)}
+                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 cursor-pointer"
+                  >
+                    + Add First Entry
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cs.items.map((it) => (
+                    <div key={it.id} className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/40 space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                          <IconPicker
+                            value={it.icon || 'check'}
+                            onChange={(icon) => handleUpdateCustomItem(cs.id, it.id, 'icon', icon)}
+                            title="Item Icon"
+                          />
+                          <input
+                            type="text"
+                            value={it.title}
+                            onChange={(e) => handleUpdateCustomItem(cs.id, it.id, 'title', e.target.value)}
+                            placeholder="Title / Honor / Item (e.g. English, Patent #1234, Keynote Speaker)"
+                            className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomItem(cs.id, it.id)}
+                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Organization / Subtitle</label>
+                          <input
+                            type="text"
+                            value={it.subtitle || ''}
+                            onChange={(e) => handleUpdateCustomItem(cs.id, it.id, 'subtitle', e.target.value)}
+                            placeholder="e.g. Native / Professional Fluency or IEEE Conference"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Date / Year</label>
+                          <input
+                            type="text"
+                            value={it.date || ''}
+                            onChange={(e) => handleUpdateCustomItem(cs.id, it.id, 'date', e.target.value)}
+                            placeholder="e.g. 2024"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <textarea
+                        rows={2}
+                        value={it.description || ''}
+                        onChange={(e) => handleUpdateCustomItem(cs.id, it.id, 'description', e.target.value)}
+                        placeholder="Description or key takeaways..."
+                        className="w-full p-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-800"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* TAB 6: CONTACT DETAILS */}
         {activeTab === 'contact' && (
