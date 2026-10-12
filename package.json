@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "better-sqlite3": "^13.0.3",
     "canvas-confetti": "^1.9.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
@@ -20,6 +21,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^22.13.9",
     "@types/react": "^19.0.10",

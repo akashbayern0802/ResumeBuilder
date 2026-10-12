@@ -20,7 +20,8 @@ import {
   ChevronDown,
   Check,
   Cloud,
-  CreditCard
+  CreditCard,
+  Database
 } from 'lucide-react';
 
 interface Props {
@@ -35,6 +36,7 @@ interface Props {
   onOpenJdModal: () => void;
   onOpenResumeModal: () => void;
   onOpenSubscriptions: () => void;
+  onOpenSavedResumes?: () => void;
   onPrint: () => void;
   isDownloadingPdf?: boolean;
 }
@@ -51,6 +53,7 @@ export const Header: React.FC<Props> = ({
   onOpenJdModal,
   onOpenResumeModal,
   onOpenSubscriptions,
+  onOpenSavedResumes,
   onPrint,
   isDownloadingPdf
 }) => {
@@ -555,6 +558,19 @@ export const Header: React.FC<Props> = ({
               <CreditCard className="w-3.5 h-3.5" />
               <span>Subscriptions</span>
             </button>
+
+            {/* SQLite Saved Resumes */}
+            {onOpenSavedResumes && (
+              <button
+                type="button"
+                onClick={onOpenSavedResumes}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-all shadow-2xs cursor-pointer"
+                title="Save and load resumes from local SQLite database (data/resumes.db)"
+              >
+                <Database className="w-3.5 h-3.5 text-indigo-600" />
+                <span>SQLite DB</span>
+              </button>
+            )}
 
             {/* Export Dropdown / Buttons */}
             <div className="flex items-center gap-1.5">

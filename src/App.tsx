@@ -17,6 +17,7 @@ import { SubscriptionTrackerModal } from './components/SubscriptionTrackerModal'
 import { PdfPreviewModal } from './components/PdfPreviewModal';
 import { RearrangeSectionsModal } from './components/RearrangeSectionsModal';
 import { DesignFontModal } from './components/DesignFontModal';
+import { SavedResumesModal } from './components/SavedResumesModal';
 import { Eye, Edit3, Briefcase, Sparkles, UploadCloud, AlertTriangle, ArrowUpDown, Palette, FileCheck, Download } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -81,6 +82,7 @@ export function App() {
   const [isPdfPreviewOpen, setIsPdfPreviewOpen] = useState(false);
   const [isRearrangeOpen, setIsRearrangeOpen] = useState(false);
   const [isDesignOpen, setIsDesignOpen] = useState(false);
+  const [isSavedResumesOpen, setIsSavedResumesOpen] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   // Real-time ATS match analysis
@@ -224,6 +226,7 @@ export function App() {
         onOpenJdModal={() => setIsJdModalOpen(true)}
         onOpenResumeModal={() => setIsResumeModalOpen(true)}
         onOpenSubscriptions={() => setIsSubscriptionModalOpen(true)}
+        onOpenSavedResumes={() => setIsSavedResumesOpen(true)}
         onPrint={handleDownloadPdf}
         isDownloadingPdf={isDownloadingPdf}
       />
@@ -544,6 +547,18 @@ export function App() {
         onClose={() => setIsDesignOpen(false)}
         resume={resume}
         onChange={setResume}
+      />
+
+      {/* Local SQLite Resume Store Modal */}
+      <SavedResumesModal
+        isOpen={isSavedResumesOpen}
+        onClose={() => setIsSavedResumesOpen(false)}
+        currentResume={resume}
+        currentTemplate={template}
+        onLoadResume={(loadedResume, loadedTemplate) => {
+          setResume(loadedResume);
+          if (loadedTemplate) setTemplate(loadedTemplate);
+        }}
       />
     </div>
   );

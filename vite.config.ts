@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { sqlitePlugin } from './vite-sqlite-plugin';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), sqlitePlugin()],
   server: {
     port: 3000,
     open: false,
