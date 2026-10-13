@@ -251,19 +251,7 @@ export const ResumePreview: React.FC<Props> = ({
   );
 
   const renderSharedAchievements = (options?: { headerClass?: string; borderStyle?: React.CSSProperties; titlePrefix?: React.ReactNode; cardStyle?: string }) => {
-    const achList = (resume.achievements && resume.achievements.length > 0)
-      ? resume.achievements
-      : (resume.projects && resume.projects.length > 0)
-        ? resume.projects.map((p, idx) => {
-            const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
-            return {
-              id: p.id,
-              title: p.name.replace(/ Milestone$/i, ''),
-              description: p.description || p.bullets?.[0] || '',
-              icon: p.icon || defaultIcons[idx % defaultIcons.length]
-            };
-          })
-        : [];
+    const achList = resume.achievements && resume.achievements.length > 0 ? resume.achievements : [];
     if (achList.length === 0) return null;
     return (
       <section className={sectionMargin}>
@@ -671,20 +659,7 @@ export const ResumePreview: React.FC<Props> = ({
           );
 
           const renderEnhancvAchievements = () => {
-            const achList = (resume.achievements && resume.achievements.length > 0)
-              ? resume.achievements
-              : (resume.projects && resume.projects.length > 0)
-                ? resume.projects.map((p, idx) => {
-                    const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
-                    return {
-                      id: p.id,
-                      title: p.name.replace(/ Milestone$/i, ''),
-                      description: p.description || p.bullets?.[0] || '',
-                      icon: p.icon || defaultIcons[idx % defaultIcons.length]
-                    };
-                  })
-                : [];
-
+            const achList = resume.achievements && resume.achievements.length > 0 ? resume.achievements : [];
             if (achList.length === 0) return null;
 
             return (
@@ -1015,20 +990,7 @@ export const ResumePreview: React.FC<Props> = ({
           );
 
           const renderGraphicalAchievements = () => {
-            const achList = (resume.achievements && resume.achievements.length > 0)
-              ? resume.achievements
-              : (resume.projects && resume.projects.length > 0)
-                ? resume.projects.map((p, idx) => {
-                    const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
-                    return {
-                      id: p.id,
-                      title: p.name.replace(/ Milestone$/i, ''),
-                      description: p.description || p.bullets?.[0] || '',
-                      icon: p.icon || defaultIcons[idx % defaultIcons.length]
-                    };
-                  })
-                : [];
-
+            const achList = resume.achievements && resume.achievements.length > 0 ? resume.achievements : [];
             if (achList.length === 0) return null;
 
             return (
@@ -1345,7 +1307,7 @@ export const ResumePreview: React.FC<Props> = ({
                 <section key="projects" className={sectionMargin}>
                   <div className={`${is2PageFit ? 'border-b-2 pb-0.5 mb-1' : 'border-b-2 pb-1 mb-2'}`} style={{ borderColor: primaryColor }}>
                     <h2 className={`${is2PageFit ? 'text-[11.5px]' : 'text-[13px]'} font-bold uppercase tracking-wider text-slate-950 leading-normal`}>
-                      Key Strategic Deliverables & Achievements
+                      Key Strategic Projects & Deliverables
                     </h2>
                   </div>
                   <div className={jobSpacing}>
@@ -1371,19 +1333,7 @@ export const ResumePreview: React.FC<Props> = ({
             }
 
             if (secId === 'achievements') {
-              const achList = (resume.achievements && resume.achievements.length > 0)
-                ? resume.achievements
-                : (resume.projects && resume.projects.length > 0)
-                  ? resume.projects.map((p, idx) => {
-                      const defaultIcons = ['award', 'barchart', 'trending', 'gem', 'rocket', 'trophy'] as const;
-                      return {
-                        id: p.id,
-                        title: p.name.replace(/ Milestone$/i, ''),
-                        description: p.description || p.bullets?.[0] || '',
-                        icon: p.icon || defaultIcons[idx % defaultIcons.length]
-                      };
-                    })
-                  : [];
+              const achList = resume.achievements && resume.achievements.length > 0 ? resume.achievements : [];
               if (achList.length === 0) return null;
               return (
                 <section key="achievements" className={sectionMargin}>
