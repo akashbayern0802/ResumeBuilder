@@ -96,7 +96,10 @@ export const SavedResumesModal: React.FC<Props> = ({
       if (full && full.resumeData) {
         setActiveResumeId(meta.id);
         onLoadResume(full.resumeData, full.template);
-        setSaveSuccessMsg(`Loaded "${meta.title}" into active editor!`);
+        setSaveSuccessMsg(`Loaded "${meta.title}"! Switching to editor...`);
+        setTimeout(() => {
+          onClose();
+        }, 500);
       } else {
         setErrorMsg('Could not read resume content from SQLite');
       }
