@@ -498,7 +498,29 @@ Output STRICT JSON with this exact schema:
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Vertex AI API error: ${response.statusText} (${response.status})`);
+        const errMsg = errorData.error?.message || '';
+
+        // If error is related to responseMimeType / JSON mode not supported for this model, retry without it
+        if (response.status === 400 && (errMsg.toLowerCase().includes('responsemimetype') || errMsg.toLowerCase().includes('generationconfig'))) {
+          const rawPayload = {
+            contents: payload.contents,
+            generationConfig: {
+              temperature: 0.2
+            }
+          };
+          const retryRes = await fetch(requestUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(rawPayload)
+          });
+          if (retryRes.ok) {
+            response = retryRes;
+          } else {
+            throw new Error(errMsg || `Vertex AI API error: ${response.statusText} (${response.status})`);
+          }
+        } else {
+          throw new Error(errMsg || `Vertex AI API error: ${response.statusText} (${response.status})`);
+        }
       }
 
       const data = await response.json();

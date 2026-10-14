@@ -725,23 +725,23 @@ export const ResumePreview: React.FC<Props> = ({
                     </div>
 
                     {/* Contact Badges */}
-                    <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-1.5 text-[11px]">
                       {resume.phone && (
-                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
-                          <Phone className="w-3 h-3 text-amber-400" />
-                          <span>{resume.phone}</span>
+                        <span className="inline-flex items-center gap-1.5 bg-slate-800/95 text-slate-100 px-2.5 py-1.5 rounded-md border border-slate-700/80 leading-none shadow-2xs">
+                          <Phone className="w-3 h-3 text-amber-400 shrink-0" style={{ overflow: 'visible' }} />
+                          <span className="leading-none">{resume.phone}</span>
                         </span>
                       )}
                       {resume.email && (
-                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
-                          <Mail className="w-3 h-3 text-amber-400" />
-                          <span>{resume.email}</span>
+                        <span className="inline-flex items-center gap-1.5 bg-slate-800/95 text-slate-100 px-2.5 py-1.5 rounded-md border border-slate-700/80 leading-none shadow-2xs">
+                          <Mail className="w-3 h-3 text-amber-400 shrink-0" style={{ overflow: 'visible' }} />
+                          <span className="leading-none">{resume.email}</span>
                         </span>
                       )}
                       {resume.location && (
-                        <span className="flex items-center gap-1 bg-slate-800/90 text-slate-200 px-2 py-0.5 rounded border border-slate-700">
-                          <MapPin className="w-3 h-3 text-amber-400" />
-                          <span>{resume.location}</span>
+                        <span className="inline-flex items-center gap-1.5 bg-slate-800/95 text-slate-100 px-2.5 py-1.5 rounded-md border border-slate-700/80 leading-none shadow-2xs">
+                          <MapPin className="w-3 h-3 text-amber-400 shrink-0" style={{ overflow: 'visible' }} />
+                          <span className="leading-none">{resume.location}</span>
                         </span>
                       )}
                     </div>
@@ -887,18 +887,18 @@ export const ResumePreview: React.FC<Props> = ({
 
           const renderGraphicalCertifications = () => (
             resume.certifications && resume.certifications.length > 0 ? (
-              <section className="mb-3">
-                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
-                  <Award className="w-3.5 h-3.5 text-indigo-600" />
+              <section className={is2PageFit ? 'mb-2' : 'mb-3'}>
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2">
+                  <Award className="w-3.5 h-3.5 text-indigo-600 shrink-0" style={{ overflow: 'visible' }} />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Professional Certifications
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
                   {resume.certifications.map((c, idx) => (
-                    <div key={idx} className="flex items-start gap-1.5 p-1.5 rounded bg-slate-50 border border-slate-200">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-                      <span className="font-semibold text-slate-900 text-[11px]">{c}</span>
+                    <div key={idx} className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-slate-50 border border-slate-200">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0 min-w-[14px]" style={{ overflow: 'visible' }} />
+                      <span className="font-semibold text-slate-900 text-[11px] leading-snug">{c}</span>
                     </div>
                   ))}
                 </div>
@@ -911,9 +911,9 @@ export const ResumePreview: React.FC<Props> = ({
             if (achList.length === 0) return null;
 
             return (
-              <section className="mb-3">
-                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2.5">
-                  <Trophy className="w-3.5 h-3.5 text-indigo-600" />
+              <section className={is2PageFit ? 'mb-2' : 'mb-3'}>
+                <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-1 mb-2">
+                  <Trophy className="w-3.5 h-3.5 text-indigo-600 shrink-0" style={{ overflow: 'visible' }} />
                   <h2 className="text-xs font-black uppercase tracking-wider text-slate-950">
                     Key Strategic Deliverables & Milestone Achievements
                   </h2>
@@ -921,7 +921,9 @@ export const ResumePreview: React.FC<Props> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {achList.map((ach) => (
                     <div key={ach.id} className="border-l-4 border-indigo-600 bg-indigo-50/40 p-2 rounded-r border border-slate-200 flex items-start gap-2">
-                      {renderAchievementIcon(ach.icon, "w-4 h-4 text-indigo-600 shrink-0 mt-0.5")}
+                      <span className="shrink-0 mt-0.5 min-w-[16px]" style={{ overflow: 'visible' }}>
+                        {renderAchievementIcon(ach.icon, "w-4 h-4 text-indigo-600 shrink-0")}
+                      </span>
                       <div>
                         <span className="font-bold text-slate-950 block">{ach.title}</span>
                         <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">

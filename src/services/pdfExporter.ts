@@ -140,16 +140,55 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       if (Math.abs(canvasAspect - a4Aspect) > 0.01) {
         const targetWidth = canvas.width;
         const targetHeight = Math.round(canvas.width * a4Aspect);
-        const fittedCanvas = document.createElement('canvas');
-        fittedCanvas.width = targetWidth;
-        fittedCanvas.height = targetHeight;
-        const fCtx = fittedCanvas.getContext('2d');
-        if (fCtx) {
-          fCtx.fillStyle = '#ffffff';
-          fCtx.fillRect(0, 0, targetWidth, targetHeight);
-          // Draw un-distorted at natural 1:1 scale from top
-          fCtx.drawImage(canvas, 0, 0, canvas.width, Math.min(canvas.height, targetHeight), 0, 0, canvas.width, Math.min(canvas.height, targetHeight));
-          pageCanvas = fittedCanvas;
+
+        if (canvas.height > targetHeight * 1.02 && canvas.height <= targetHeight * 1.30) {
+          // Moderate overflow (up to 30%): smoothly fit all content onto this page so nothing (like Achievements) is cut off
+          const fittedCanvas = document.createElement('canvas');
+          fittedCanvas.width = targetWidth;
+          fittedCanvas.height = targetHeight;
+          const fCtx = fittedCanvas.getContext('2d');
+          if (fCtx) {
+            fCtx.fillStyle = '#ffffff';
+            fCtx.fillRect(0, 0, targetWidth, targetHeight);
+            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+            pageCanvas = fittedCanvas;
+          }
+        } else if (canvas.height > targetHeight * 1.30) {
+          // Significant overflow: paginate across multiple pages so no content is dropped
+          let currentY = 0;
+          while (currentY < canvas.height) {
+            const remainingHeight = canvas.height - currentY;
+            const sliceHeight = Math.min(targetHeight, remainingHeight);
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = targetWidth;
+            sliceCanvas.height = targetHeight;
+            const sCtx = sliceCanvas.getContext('2d');
+            if (sCtx) {
+              sCtx.fillStyle = '#ffffff';
+              sCtx.fillRect(0, 0, targetWidth, targetHeight);
+              sCtx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+            }
+            const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+            pageImages.push(sliceImgData);
+            if (pageImages.length > 1) {
+              pdf.addPage();
+            }
+            pdf.addImage(sliceImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+            currentY += sliceHeight;
+          }
+          continue;
+        } else {
+          // Under A4 height: pad bottom with clean white space
+          const fittedCanvas = document.createElement('canvas');
+          fittedCanvas.width = targetWidth;
+          fittedCanvas.height = targetHeight;
+          const fCtx = fittedCanvas.getContext('2d');
+          if (fCtx) {
+            fCtx.fillStyle = '#ffffff';
+            fCtx.fillRect(0, 0, targetWidth, targetHeight);
+            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+            pageCanvas = fittedCanvas;
+          }
         }
       }
 
