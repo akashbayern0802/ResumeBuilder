@@ -178,14 +178,15 @@ export interface TailoringResult {
   };
 }
 
-export type LLMProviderType = 'offline' | 'gemini' | 'groq' | 'ollama' | 'openai' | 'anthropic' | 'bedrock';
+export type LLMProviderType = 'offline' | 'gemini' | 'vertex' | 'groq' | 'ollama' | 'openai' | 'anthropic' | 'bedrock';
 
 export interface LLMConfig {
   provider: LLMProviderType;
   apiKey?: string;
   model: string;
-  endpoint?: string; // For Ollama / Bedrock Mantle custom base URL
-  project?: string; // For Bedrock Mantle OpenAI-Project header (defaults to "default")
+  endpoint?: string; // For Ollama / Bedrock Mantle / Vertex custom base URL
+  project?: string; // For Bedrock Mantle / Google Cloud Vertex project ID
+  location?: string; // For Google Cloud Vertex AI region/location (e.g. us-central1)
 }
 
 export type ResumeTemplate =

@@ -21,6 +21,7 @@ export function getProviderModel(provider: LLMProviderType): string {
   if (saved) return saved;
   switch (provider) {
     case 'gemini': return 'gemini-2.5-flash';
+    case 'vertex': return 'gemini-2.5-flash';
     case 'openai': return 'gpt-4o-mini';
     case 'anthropic': return 'claude-3-5-sonnet-latest';
     case 'groq': return 'llama-3.3-70b-versatile';
@@ -40,6 +41,7 @@ export function getProviderDisplayName(provider: LLMProviderType): string {
     case 'openai': return 'OpenAI (GPT)';
     case 'anthropic': return 'Anthropic Claude';
     case 'gemini': return 'Google Gemini';
+    case 'vertex': return 'Google Vertex AI (GCP)';
     case 'groq': return 'Groq Cloud';
     case 'ollama': return 'Local Ollama';
     case 'bedrock': return 'Amazon Bedrock (Mantle)';
@@ -47,6 +49,41 @@ export function getProviderDisplayName(provider: LLMProviderType): string {
     default: return provider;
   }
 }
+
+export function getVertexProject(): string {
+  return localStorage.getItem('RESUME_VERTEX_PROJECT') || '';
+}
+
+export function setVertexProject(project: string): void {
+  localStorage.setItem('RESUME_VERTEX_PROJECT', (project || '').trim());
+}
+
+export function getVertexLocation(): string {
+  return localStorage.getItem('RESUME_VERTEX_LOCATION') || 'us-central1';
+}
+
+export function setVertexLocation(location: string): void {
+  localStorage.setItem('RESUME_VERTEX_LOCATION', (location || 'us-central1').trim());
+}
+
+export const VERTEX_LOCATIONS = [
+  { id: 'us-central1', label: 'us-central1 (Iowa - Primary / Recommended)' },
+  { id: 'asia-south1', label: 'asia-south1 (Mumbai, India)' },
+  { id: 'asia-southeast1', label: 'asia-southeast1 (Singapore)' },
+  { id: 'europe-west1', label: 'europe-west1 (Belgium)' },
+  { id: 'europe-west4', label: 'europe-west4 (Netherlands)' },
+  { id: 'us-east4', label: 'us-east4 (N. Virginia)' },
+  { id: 'us-west1', label: 'us-west1 (Oregon)' },
+  { id: 'asia-east1', label: 'asia-east1 (Taiwan)' }
+];
+
+export const VERTEX_GEMINI_MODELS = [
+  { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Recommended • Ultra Fast & Scalable)' },
+  { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro (High Reasoning & Strategic Analysis)' },
+  { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash (Fast & Multimodal)' },
+  { id: 'gemini-1.5-flash', label: 'gemini-1.5-flash (Stable Production)' },
+  { id: 'gemini-1.5-pro', label: 'gemini-1.5-pro (Complex Documents & Large Context)' }
+];
 
 export function getBedrockProject(): string {
   return localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default';
@@ -102,7 +139,8 @@ export const DEFAULT_LLM_CONFIG: LLMConfig = {
   model: localStorage.getItem('RESUME_LLM_MODEL') || 'gemini-2.5-flash',
   apiKey: localStorage.getItem('RESUME_LLM_API_KEY') || '',
   endpoint: localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || 'http://localhost:11434',
-  project: localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default'
+  project: localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default',
+  location: localStorage.getItem('RESUME_VERTEX_LOCATION') || 'us-central1'
 };
 
 /**
@@ -357,6 +395,109 @@ Output STRICT JSON with this exact schema:
           isLive: false,
           fallbackReason: formatFallbackReason('Google Gemini', err),
           requestedProvider: 'gemini'
+        }
+      };
+    }
+  }
+
+  // --- GOOGLE VERTEX AI (GEMINI MODELS VIA GOOGLE CLOUD VERTEX KEY) ---
+  if (config.provider === 'vertex') {
+    try {
+      const projectId = (config.project || getVertexProject() || '').trim();
+      const location = (config.location || getVertexLocation() || 'us-central1').trim();
+      const model = config.model || 'gemini-2.5-flash';
+      const apiKey = (config.apiKey || getProviderApiKey('vertex') || '').trim();
+
+      if (!projectId) {
+        throw new Error('Google Cloud Project ID is required for Vertex AI. Please configure it in AI Settings.');
+      }
+      if (!apiKey) {
+        throw new Error('Vertex API Key or Google Cloud Access Token is required.');
+      }
+
+      const isLocalHost = typeof window !== 'undefined' && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1'
+      );
+
+      // Target endpoint for Vertex AI generateContent
+      const directUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+
+      const requestUrl = isLocalHost
+        ? `/api/vertex-proxy?region=${encodeURIComponent(location)}&endpoint=${encodeURIComponent(apiKey.startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey)}`)}`
+        : (apiKey.startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey)}`);
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      if (apiKey.startsWith('ya29.') || apiKey.startsWith('Bearer ')) {
+        headers['Authorization'] = apiKey.startsWith('Bearer ') ? apiKey : `Bearer ${apiKey}`;
+      } else {
+        headers['x-goog-api-key'] = apiKey;
+      }
+
+      const payload = {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: indianContextPrompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json'
+        }
+      };
+
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Vertex AI API error: ${response.statusText} (${response.status})`);
+      }
+
+      const data = await response.json();
+      let text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+      if (text.startsWith('```')) {
+        text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      } else {
+        const startIdx = text.indexOf('{');
+        const endIdx = text.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          text = text.substring(startIdx, endIdx + 1);
+        }
+      }
+
+      const parsed: TailoringResult = JSON.parse(text);
+      return {
+        ...parsed,
+        engineUsed: {
+          provider: 'vertex',
+          model,
+          isLive: true
+        }
+      };
+    } catch (err: any) {
+      console.warn('Vertex AI API call failed, falling back to offline engine:', err);
+      const fallback = await tailorResumeWithAI(resume, jobDescription, atsAnalysis, { ...config, provider: 'offline' });
+      return {
+        ...fallback,
+        engineUsed: {
+          provider: 'offline',
+          model: 'heuristic',
+          isLive: false,
+          fallbackReason: formatFallbackReason('Google Vertex AI', err),
+          requestedProvider: 'vertex'
         }
       };
     }

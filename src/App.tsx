@@ -45,8 +45,13 @@ export function App() {
       : (localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint);
     const savedProject = savedProvider === 'bedrock'
       ? (localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default')
+      : (savedProvider === 'vertex'
+        ? (localStorage.getItem('RESUME_VERTEX_PROJECT') || '')
+        : undefined);
+    const savedLocation = savedProvider === 'vertex'
+      ? (localStorage.getItem('RESUME_VERTEX_LOCATION') || 'us-central1')
       : undefined;
-    return { provider: savedProvider, apiKey: savedKey, model: savedModel, endpoint: savedEndpoint, project: savedProject };
+    return { provider: savedProvider, apiKey: savedKey, model: savedModel, endpoint: savedEndpoint, project: savedProject, location: savedLocation };
   });
 
   const handleQuickSelectProvider = (newProvider: LLMProviderType) => {
@@ -57,13 +62,19 @@ export function App() {
       : (localStorage.getItem('RESUME_OLLAMA_ENDPOINT') || DEFAULT_LLM_CONFIG.endpoint);
     const project = newProvider === 'bedrock'
       ? (localStorage.getItem('RESUME_BEDROCK_PROJECT') || 'default')
+      : (newProvider === 'vertex'
+        ? (localStorage.getItem('RESUME_VERTEX_PROJECT') || '')
+        : undefined);
+    const location = newProvider === 'vertex'
+      ? (localStorage.getItem('RESUME_VERTEX_LOCATION') || 'us-central1')
       : undefined;
     const newConfig: LLMConfig = {
       provider: newProvider,
       apiKey: key,
       model,
       endpoint,
-      project
+      project,
+      location
     };
     localStorage.setItem('RESUME_LLM_PROVIDER', newProvider);
     localStorage.setItem('RESUME_LLM_API_KEY', key);

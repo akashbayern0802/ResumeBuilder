@@ -108,6 +108,13 @@ export const Header: React.FC<Props> = ({
           icon: <Cloud className="w-3.5 h-3.5 text-orange-600" />,
           badgeColor: hasKey ? 'text-orange-900 bg-orange-50 border-orange-200' : 'text-amber-900 bg-amber-100 border-amber-300'
         };
+      case 'vertex':
+        return {
+          name: 'Vertex AI',
+          detail: hasKey ? modelName.replace('gemini-', '') : 'No Key (Offline Fallback)',
+          icon: <Cloud className="w-3.5 h-3.5 text-sky-600" />,
+          badgeColor: hasKey ? 'text-sky-900 bg-sky-50 border-sky-200' : 'text-amber-900 bg-amber-100 border-amber-300'
+        };
       default:
         return {
           name: 'Offline NLP',
@@ -324,6 +331,39 @@ export const Header: React.FC<Props> = ({
                             </div>
                           </div>
                           {llmConfig.provider === 'gemini' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
+                        </button>
+                      );
+                    })()}
+
+                    {/* Google Vertex AI */}
+                    {(() => {
+                      const hasVertexKey = Boolean(getProviderApiKey('vertex'));
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onQuickSelectProvider?.('vertex');
+                            setIsEngineDropdownOpen(false);
+                          }}
+                          className="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors text-xs group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="p-1 rounded bg-sky-50 text-sky-600">
+                              <Cloud className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-800">Google Vertex AI</span>
+                                {hasVertexKey ? (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">GCP Key</span>
+                                ) : (
+                                  <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200">No Key (Fallback)</span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400">Enterprise Gemini via GCP Vertex</div>
+                            </div>
+                          </div>
+                          {llmConfig.provider === 'vertex' && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
                         </button>
                       );
                     })()}

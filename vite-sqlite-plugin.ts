@@ -32,6 +32,54 @@ export function sqlitePlugin(): Plugin {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || '';
 
+        // Match /api/vertex-proxy endpoint to bypass browser CORS in local dev
+        if (url.startsWith('/api/vertex-proxy')) {
+          res.setHeader('Content-Type', 'application/json');
+          try {
+            const parsedUrl = new URL(url, 'http://localhost');
+            const targetEndpoint = parsedUrl.searchParams.get('endpoint');
+            if (!targetEndpoint) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Missing endpoint query parameter' }));
+              return;
+            }
+
+            let bodyData = '';
+            req.on('data', chunk => { bodyData += chunk; });
+            req.on('end', async () => {
+              try {
+                const forwardHeaders: Record<string, string> = {
+                  'Content-Type': 'application/json'
+                };
+                if (req.headers['x-goog-api-key']) {
+                  forwardHeaders['x-goog-api-key'] = req.headers['x-goog-api-key'] as string;
+                }
+                if (req.headers['authorization']) {
+                  forwardHeaders['authorization'] = req.headers['authorization'] as string;
+                }
+
+                const vertexRes = await fetch(targetEndpoint, {
+                  method: req.method || 'POST',
+                  headers: forwardHeaders,
+                  body: bodyData || undefined
+                });
+
+                res.statusCode = vertexRes.status;
+                const respText = await vertexRes.text();
+                res.end(respText);
+              } catch (proxyErr: any) {
+                res.statusCode = 502;
+                res.end(JSON.stringify({ error: `Vertex proxy error: ${proxyErr.message || proxyErr}` }));
+              }
+            });
+            return;
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: err.message || 'Internal proxy error' }));
+            return;
+          }
+        }
+
         // Match /api/resumes endpoints
         if (url.startsWith('/api/resumes')) {
           res.setHeader('Content-Type', 'application/json');
