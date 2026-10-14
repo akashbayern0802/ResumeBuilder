@@ -63,11 +63,22 @@ export function getVertexLocation(): string {
 }
 
 export function setVertexLocation(location: string): void {
-  localStorage.setItem('RESUME_VERTEX_LOCATION', (location || 'us-central1').trim());
+  localStorage.setItem('RESUME_VERTEX_LOCATION', (location || 'global').trim());
+}
+
+export function resolveVertexBaseUrl(location: string): string {
+  const loc = (location || 'global').trim().toLowerCase();
+  if (loc === 'global') {
+    return 'https://aiplatform.googleapis.com';
+  }
+  return `https://${loc}-aiplatform.googleapis.com`;
 }
 
 export const VERTEX_LOCATIONS = [
-  { id: 'us-central1', label: 'us-central1 (Iowa - Primary / Recommended)' },
+  { id: 'global', label: 'global (Global Endpoint • Required for Gemini 3.8 & Argon 4)' },
+  { id: 'us-central1', label: 'us-central1 (Iowa - Primary / Recommended for 2.5/2.0/1.5)' },
+  { id: 'us', label: 'us (US Multi-Region)' },
+  { id: 'eu', label: 'eu (EU Multi-Region)' },
   { id: 'asia-south1', label: 'asia-south1 (Mumbai, India)' },
   { id: 'asia-southeast1', label: 'asia-southeast1 (Singapore)' },
   { id: 'europe-west1', label: 'europe-west1 (Belgium)' },
@@ -78,7 +89,9 @@ export const VERTEX_LOCATIONS = [
 ];
 
 export const VERTEX_GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Recommended • Ultra Fast & Scalable)' },
+  { id: 'gemini-3.8-flash', label: 'gemini-3.8-flash (Latest Preview • Global Endpoint)' },
+  { id: 'gemini-4-argon', label: 'gemini-4-argon (Frontier Deep Reasoning • Global Endpoint)' },
+  { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (Fast & Scalable Production)' },
   { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro (High Reasoning & Strategic Analysis)' },
   { id: 'gemini-2.0-flash', label: 'gemini-2.0-flash (Fast & Multimodal)' },
   { id: 'gemini-1.5-flash', label: 'gemini-1.5-flash (Stable Production)' },
@@ -415,16 +428,22 @@ Output STRICT JSON with this exact schema:
         throw new Error('Vertex API Key or Google Cloud Access Token is required.');
       }
 
+      const isGlobalModel = model.toLowerCase().includes('3.8') || model.toLowerCase().includes('argon');
+      const effectiveLocation = isGlobalModel && (!location || location === 'us-central1')
+        ? 'global'
+        : (location || 'global');
+
       const isLocalHost = typeof window !== 'undefined' && (
         window.location.hostname === 'localhost' ||
         window.location.hostname === '127.0.0.1'
       );
 
+      const baseUrl = resolveVertexBaseUrl(effectiveLocation);
       // Target endpoint for Vertex AI generateContent
-      const directUrl = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+      const directUrl = `${baseUrl}/v1/projects/${projectId}/locations/${effectiveLocation}/publishers/google/models/${model}:generateContent`;
 
       const requestUrl = isLocalHost
-        ? `/api/vertex-proxy?region=${encodeURIComponent(location)}&endpoint=${encodeURIComponent(apiKey.startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey)}`)}`
+        ? `/api/vertex-proxy?region=${encodeURIComponent(effectiveLocation)}&endpoint=${encodeURIComponent(apiKey.startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey)}`)}`
         : (apiKey.startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey)}`);
 
       const headers: Record<string, string> = {
@@ -454,11 +473,28 @@ Output STRICT JSON with this exact schema:
         }
       };
 
-      const response = await fetch(requestUrl, {
+      let response = await fetch(requestUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)
       });
+
+      // If 404 on v1, retry on v1beta1 (preview models on Vertex AI)
+      if (response.status === 404) {
+        const betaDirectUrl = directUrl.replace('/v1/', '/v1beta1/');
+        const betaRequestUrl = isLocalHost
+          ? `/api/vertex-proxy?region=${encodeURIComponent(effectiveLocation)}&endpoint=${encodeURIComponent(apiKey.startsWith('ya29.') ? betaDirectUrl : `${betaDirectUrl}?key=${encodeURIComponent(apiKey)}`)}`
+          : (apiKey.startsWith('ya29.') ? betaDirectUrl : `${betaDirectUrl}?key=${encodeURIComponent(apiKey)}`);
+
+        const betaResponse = await fetch(betaRequestUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+        if (betaResponse.ok) {
+          response = betaResponse;
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));

@@ -17,6 +17,7 @@ import {
   setVertexProject,
   getVertexLocation,
   setVertexLocation,
+  resolveVertexBaseUrl,
   VERTEX_LOCATIONS,
   VERTEX_GEMINI_MODELS
 } from '../services/llmService';
@@ -375,9 +376,15 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
           window.location.hostname === 'localhost' ||
           window.location.hostname === '127.0.0.1'
         );
-        const directUrl = `https://${vertexLocation}-aiplatform.googleapis.com/v1/projects/${vertexProject.trim()}/locations/${vertexLocation}/publishers/google/models/${model}:generateContent`;
+        const isGlobalModel = model.toLowerCase().includes('3.8') || model.toLowerCase().includes('argon');
+        const effectiveLocation = isGlobalModel && (!vertexLocation || vertexLocation === 'us-central1')
+          ? 'global'
+          : (vertexLocation || 'global');
+
+        const baseUrl = resolveVertexBaseUrl(effectiveLocation);
+        const directUrl = `${baseUrl}/v1/projects/${vertexProject.trim()}/locations/${effectiveLocation}/publishers/google/models/${model}:generateContent`;
         const testUrl = isLocalHost
-          ? `/api/vertex-proxy?region=${encodeURIComponent(vertexLocation)}&endpoint=${encodeURIComponent(apiKey.trim().startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey.trim())}`)}`
+          ? `/api/vertex-proxy?region=${encodeURIComponent(effectiveLocation)}&endpoint=${encodeURIComponent(apiKey.trim().startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey.trim())}`)}`
           : (apiKey.trim().startsWith('ya29.') ? directUrl : `${directUrl}?key=${encodeURIComponent(apiKey.trim())}`);
 
         const headers: Record<string, string> = {
@@ -389,7 +396,7 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
           headers['x-goog-api-key'] = apiKey.trim();
         }
 
-        const res = await fetch(testUrl, {
+        let res = await fetch(testUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -398,9 +405,29 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
           })
         });
 
+        // If 404 on v1, retry on v1beta1 (common for preview/frontier models like Gemini 3.8 / Argon 4)
+        if (res.status === 404) {
+          const betaDirectUrl = directUrl.replace('/v1/', '/v1beta1/');
+          const betaTestUrl = isLocalHost
+            ? `/api/vertex-proxy?region=${encodeURIComponent(effectiveLocation)}&endpoint=${encodeURIComponent(apiKey.trim().startsWith('ya29.') ? betaDirectUrl : `${betaDirectUrl}?key=${encodeURIComponent(apiKey.trim())}`)}`
+            : (apiKey.trim().startsWith('ya29.') ? betaDirectUrl : `${betaDirectUrl}?key=${encodeURIComponent(apiKey.trim())}`);
+
+          const betaRes = await fetch(betaTestUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: 'Respond with OK' }] }],
+              generationConfig: { maxOutputTokens: 5, temperature: 0.1 }
+            })
+          });
+          if (betaRes.ok) {
+            res = betaRes;
+          }
+        }
+
         if (res.ok) {
           setTestStatus('success');
-          setTestMessage(`Successfully connected to Google Vertex AI! Project: ${vertexProject.trim()}, Model: ${model}`);
+          setTestMessage(`Successfully connected to Google Vertex AI! Project: ${vertexProject.trim()}, Model: ${model} (${effectiveLocation})`);
         } else {
           const err = await res.json().catch(() => ({}));
           setTestStatus('failed');
@@ -783,6 +810,9 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                     } else {
                       setIsCustomModel(false);
                       setModel(val);
+                      if (val.toLowerCase().includes('3.8') || val.toLowerCase().includes('argon')) {
+                        setVertexLocationState('global');
+                      }
                     }
                   }}
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white font-medium"
@@ -793,14 +823,27 @@ export const ProviderSettingsModal: React.FC<Props> = ({ isOpen, onClose, config
                   <option value="custom">Custom Vertex Model ID...</option>
                 </select>
 
+                {(model.toLowerCase().includes('3.8') || model.toLowerCase().includes('argon')) && (
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-sky-700 bg-sky-50 px-2 py-1 rounded border border-sky-200">
+                    <Cloud className="w-3.5 h-3.5 shrink-0" />
+                    <span>Gemini 3.8 and Argon 4 require the <strong>Global Endpoint</strong> (Region automatically set to <code>global</code>).</span>
+                  </div>
+                )}
+
                 {(isCustomModel || !VERTEX_GEMINI_MODELS.some(m => m.id === model)) && (
                   <div className="mt-2.5">
                     <label className="block text-[11px] font-medium text-slate-600 mb-1">Custom Vertex Model Name / Endpoint</label>
                     <input
                       type="text"
                       value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                      placeholder="e.g. gemini-2.5-flash or custom tuned model ID"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setModel(val);
+                        if (val.toLowerCase().includes('3.8') || val.toLowerCase().includes('argon')) {
+                          setVertexLocationState('global');
+                        }
+                      }}
+                      placeholder="e.g. gemini-3.8-flash or gemini-4-argon"
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
                     />
                   </div>
