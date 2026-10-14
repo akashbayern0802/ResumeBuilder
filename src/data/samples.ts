@@ -211,6 +211,32 @@ export const SAMPLE_RESUMES: Record<string, ResumeData> = {
       'ITIL v3.0 Foundation in IT Service Management',
       'Certified SAFe 6.0 Product Owner/Product Manager by Scaled Agile',
       'Certified Six Sigma Exemplar Global Green Belt'
+    ],
+    achievements: [
+      {
+        id: 'ach-pwc',
+        title: 'PwC Tech Transformation Award',
+        description: 'Honored with appreciation award for driving product growth and migrating enterprise data into Delta Lake.',
+        icon: 'trophy'
+      },
+      {
+        id: 'ach-accenture-ace',
+        title: 'Accenture Ace Award (Dec 2023)',
+        description: 'Recognized for account upscaling in revenue growth, and two-time Employee of the Month (UKI domain).',
+        icon: 'award'
+      },
+      {
+        id: 'ach-icici-ncmc',
+        title: '120M Monthly Volume Scaling',
+        description: 'Scaled UPI-based top-up and mobile app card reloading for stored value NCMC card, achieving a 35% usage increase.',
+        icon: 'trending'
+      },
+      {
+        id: 'ach-lodha-leadtime',
+        title: '80% Lead Time Reduction',
+        description: 'Slashed Palava Smart Card delivery lead time by 80% and augmented utility collections by 6% via RCA on billing discrepancies.',
+        icon: 'rocket'
+      }
     ]
   },
   software_engineer: {

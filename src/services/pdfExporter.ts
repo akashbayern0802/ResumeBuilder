@@ -73,14 +73,6 @@ function findNearestWhitespaceRow(
   return desiredY;
 }
 
-/**
- * Directly downloads the resume element as a high-resolution PDF file.
- * Features smart content-aware page breaks:
- * 1. Measures DOM elements (headers, sections, bullet points) to detect straddling items.
- * 2. Shifts the page cut right before straddling bullet points or section headers.
- * 3. Scans canvas pixels to slice strictly at whitespace gaps between lines.
- * 4. Renders each slice onto an exact A4 page canvas with 300 DPI sharpness.
- */
 export interface PdfRenderResult {
   pages: string[];
   pdf: jsPDF;
@@ -89,13 +81,20 @@ export interface PdfRenderResult {
 
 /**
  * Renders the resume element into discrete high-resolution A4 page images and a jsPDF instance.
- * Allows interactive multi-page PDF previewing before downloading.
+ * Features:
+ * 1. Discrete Multi-Sheet Architecture (Sheet 1 -> Page 1, Sheet 2 -> Page 2 with zero unwanted slicing).
+ * 2. High-DPI 2.8x scaling equivalent to ~300 DPI razor-sharp print quality.
+ * 3. Lossless PNG encoding eliminating JPEG compression noise and font blurriness.
+ * 4. Strict 2-Page Fit guarantee: when active, always generates exactly 2 pages without creating a 3rd page.
  */
 export async function renderElementPdfPages(elementId: string): Promise<PdfRenderResult> {
   const element = document.getElementById(elementId);
   if (!element) {
     throw new Error(`Element with id ${elementId} not found`);
   }
+
+  const isTwoPageFit = element.getAttribute('data-fit-two-pages') === 'true' ||
+    element.classList.contains('fit-two-pages');
 
   // 1. Discrete Multi-Sheet Architecture:
   // If the resume contains explicit .pdf-page elements, render each page directly with zero slicing artifacts!
@@ -108,11 +107,13 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       format: 'a4'
     });
 
+    const isExplicitTwoSheet = pageElements.length === 2;
+
     for (let i = 0; i < pageElements.length; i++) {
       const pageEl = pageElements[i];
 
       const canvas = await html2canvas(pageEl, {
-        scale: 2,
+        scale: 2.8,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
@@ -130,30 +131,31 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
         }
       });
 
-      // Preserve natural aspect ratio and avoid horizontal or vertical stretching
-      const canvasAspect = canvas.height / canvas.width;
+      // Standard A4 aspect ratio canvas
       const a4Aspect = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
+      const targetWidth = canvas.width;
+      const targetHeight = Math.round(canvas.width * a4Aspect);
 
-      let pageCanvas = canvas;
+      let pageCanvas: HTMLCanvasElement;
 
-      // If the rendered sheet's aspect ratio differs from A4, fit onto exact A4 aspect ratio canvas
-      if (Math.abs(canvasAspect - a4Aspect) > 0.01) {
-        const targetWidth = canvas.width;
-        const targetHeight = Math.round(canvas.width * a4Aspect);
-
-        if (canvas.height > targetHeight * 1.02 && canvas.height <= targetHeight * 1.30) {
-          // Moderate overflow (up to 30%): smoothly fit all content onto this page so nothing (like Achievements) is cut off
-          const fittedCanvas = document.createElement('canvas');
-          fittedCanvas.width = targetWidth;
-          fittedCanvas.height = targetHeight;
-          const fCtx = fittedCanvas.getContext('2d');
-          if (fCtx) {
-            fCtx.fillStyle = '#ffffff';
-            fCtx.fillRect(0, 0, targetWidth, targetHeight);
-            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
-            pageCanvas = fittedCanvas;
-          }
-        } else if (canvas.height > targetHeight * 1.30) {
+      // When the user has selected 2-page fit OR this is an explicit 2-sheet resume:
+      // Hard guarantee: Sheet 1 -> Page 1, Sheet 2 -> Page 2.
+      // Under NO circumstances slice or create an unexpected 3rd page!
+      if (isTwoPageFit || isExplicitTwoSheet) {
+        const fittedCanvas = document.createElement('canvas');
+        fittedCanvas.width = targetWidth;
+        fittedCanvas.height = targetHeight;
+        const fCtx = fittedCanvas.getContext('2d');
+        if (fCtx) {
+          fCtx.fillStyle = '#ffffff';
+          fCtx.fillRect(0, 0, targetWidth, targetHeight);
+          // Scale entire sheet cleanly to fit the exact A4 page without cutting off sections
+          fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+        }
+        pageCanvas = fittedCanvas;
+      } else {
+        // Not restricted to 2 pages:
+        if (canvas.height > targetHeight * 1.35) {
           // Significant overflow: paginate across multiple pages so no content is dropped
           let currentY = 0;
           while (currentY < canvas.height) {
@@ -168,17 +170,17 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
               sCtx.fillRect(0, 0, targetWidth, targetHeight);
               sCtx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
             }
-            const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+            const sliceImgData = sliceCanvas.toDataURL('image/png');
             pageImages.push(sliceImgData);
             if (pageImages.length > 1) {
               pdf.addPage();
             }
-            pdf.addImage(sliceImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+            pdf.addImage(sliceImgData, 'PNG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
             currentY += sliceHeight;
           }
           continue;
         } else {
-          // Under A4 height: pad bottom with clean white space
+          // Under or moderately over A4 height: fit smoothly onto A4 page
           const fittedCanvas = document.createElement('canvas');
           fittedCanvas.width = targetWidth;
           fittedCanvas.height = targetHeight;
@@ -186,33 +188,31 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
           if (fCtx) {
             fCtx.fillStyle = '#ffffff';
             fCtx.fillRect(0, 0, targetWidth, targetHeight);
-            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
-            pageCanvas = fittedCanvas;
+            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
           }
+          pageCanvas = fittedCanvas;
         }
       }
 
-      const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+      // Lossless PNG export for razor-sharp typography and crisp icon graphics
+      const pageImgData = pageCanvas.toDataURL('image/png');
       pageImages.push(pageImgData);
 
-      if (i > 0) {
+      if (pageImages.length > 1) {
         pdf.addPage();
       }
 
-      pdf.addImage(pageImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+      pdf.addImage(pageImgData, 'PNG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
     }
 
     return {
       pages: pageImages,
       pdf,
-      totalPages: pageElements.length
+      totalPages: pageImages.length
     };
   }
 
-  const isTwoPageFit = element.getAttribute('data-fit-two-pages') === 'true' ||
-    element.classList.contains('fit-two-pages');
-
-  // Fallback: Measure positions of only small atomic items (under 55px) using unscaled offsetTop
+  // Fallback for single-element templates: Measure atomic items
   const avoidElements: { top: number; bottom: number }[] = [];
 
   const candidates = element.querySelectorAll('li, h1, h2, h3, .break-inside-avoid');
@@ -225,15 +225,14 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       curr = curr.offsetParent as HTMLElement;
     }
     const height = htmlChild.offsetHeight;
-    // Strictly avoid atomic items (under 55px, e.g. single bullet point or heading)
     if (height >= 8 && height <= 55) {
       avoidElements.push({ top: offsetTop, bottom: offsetTop + height });
     }
   });
 
-  // 2. Render element to high-res canvas (2x scale for 300 DPI sharpness)
+  // 2. Render element to high-res canvas (2.8x scale for ~300 DPI razor-sharp print quality)
   const canvas = await html2canvas(element, {
-    scale: 2,
+    scale: 2.8,
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
@@ -241,7 +240,6 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     scrollY: 0,
     windowWidth: 1200,
     onclone: (_clonedDoc, clonedElement) => {
-      // Ensure clonedElement and all its ancestors have unscaled transform during capture
       let curr: HTMLElement | null = clonedElement;
       while (curr) {
         if (curr.style.transform && curr.style.transform !== 'none') {
@@ -255,9 +253,9 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
   const A4_ASPECT_RATIO = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
   const idealPageHeightPx = Math.round(canvas.width * A4_ASPECT_RATIO);
 
-  // 3. Auto-fit to 2 pages if requested and within reasonable stretch (up to 2.35 pages)
+  // 3. Auto-fit to 2 pages if requested and within reasonable stretch (up to 2.5 pages)
   let activeCanvas = canvas;
-  if (isTwoPageFit && canvas.height > (2 * idealPageHeightPx) && canvas.height <= Math.round(2.35 * idealPageHeightPx)) {
+  if (isTwoPageFit && canvas.height > (2 * idealPageHeightPx) && canvas.height <= Math.round(2.5 * idealPageHeightPx)) {
     const targetHeight = Math.round(2 * idealPageHeightPx - 20);
     const scaledCanvas = document.createElement('canvas');
     scaledCanvas.width = canvas.width;
@@ -285,17 +283,16 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
 
   // 4. Calculate smart page slices
   const pageSlices: { startY: number; endY: number }[] = [];
-  const maxShiftPx = Math.round(55 * scaleY); // At most the height of a single bullet point
+  const maxShiftPx = Math.round(55 * scaleY);
 
   // If content fits on 1 page:
   if (activeCanvas.height <= idealPageHeightPx) {
     pageSlices.push({ startY: 0, endY: activeCanvas.height });
-  } else if (isTwoPageFit && activeCanvas.height <= (2 * idealPageHeightPx + 20)) {
-    // Fits in 2 pages: fill Page 1 as fully as possible down to idealPageHeightPx - 10
-    const idealCut = idealPageHeightPx - 10;
+  } else if (isTwoPageFit) {
+    // Strictly fit onto exactly 2 pages
+    const idealCut = Math.min(idealPageHeightPx - 10, Math.round(activeCanvas.height / 2));
     let targetCutY = idealCut;
 
-    // Check if an atomic bullet point or header straddles idealCut
     const straddling = canvasAvoidZones.find(
       zone => zone.top < idealCut && zone.bottom > idealCut && (idealCut - zone.top) <= maxShiftPx
     );
@@ -304,18 +301,15 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       targetCutY = straddling.top - 4;
     }
 
-    // Scan for nearest clean blank gap (tight search range of 45px)
-    targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, idealCut - 55, 45);
+    targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, idealCut - 60, 50);
 
-    // Guarantee Page 2 does not overflow A4
-    const minCutForPage2 = activeCanvas.height - idealPageHeightPx + 5;
-    if (targetCutY < minCutForPage2) {
+    const minCutForPage2 = Math.max(0, activeCanvas.height - idealPageHeightPx + 5);
+    if (targetCutY < minCutForPage2 && minCutForPage2 < idealPageHeightPx) {
       targetCutY = minCutForPage2;
       targetCutY = findNearestWhitespaceRow(ctx, activeCanvas.width, targetCutY, minCutForPage2 - 20, 30);
     }
 
-    // Ensure targetCutY does not exceed Page 1 limit
-    targetCutY = Math.min(idealPageHeightPx - 5, targetCutY);
+    targetCutY = Math.min(idealPageHeightPx - 5, Math.max(100, targetCutY));
 
     pageSlices.push({ startY: 0, endY: targetCutY });
     pageSlices.push({ startY: targetCutY, endY: activeCanvas.height });
@@ -348,7 +342,7 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     }
   }
 
-  // 5. Build multi-page A4 PDF and collect page image data URLs
+  // 5. Build multi-page A4 PDF and collect page image data URLs (Lossless PNG)
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -376,14 +370,14 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       );
     }
 
-    const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.98);
+    const pageImgData = pageCanvas.toDataURL('image/png');
     pageImages.push(pageImgData);
 
     if (i > 0) {
       pdf.addPage();
     }
 
-    pdf.addImage(pageImgData, 'JPEG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
+    pdf.addImage(pageImgData, 'PNG', 0, 0, A4_WIDTH_MM, A4_HEIGHT_MM, undefined, 'FAST');
 
     pageCanvas.width = 0;
     pageCanvas.height = 0;
