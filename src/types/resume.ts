@@ -85,8 +85,25 @@ export type ResumeSectionId =
   | 'achievements'
   | string;
 
+export type FontFamilyType =
+  | 'lato'
+  | 'raleway'
+  | 'bitter'
+  | 'exo2'
+  | 'chivo'
+  | 'tinos'
+  | 'montserrat'
+  | 'oswald'
+  | 'volkhov'
+  | 'gelasio'
+  | 'inter'
+  | 'roboto'
+  | 'merriweather'
+  | 'garamond'
+  | 'sans';
+
 export interface ResumeDesignSettings {
-  fontFamily: 'inter' | 'roboto' | 'merriweather' | 'playfair' | 'garamond' | 'sans';
+  fontFamily: FontFamilyType;
   fontSize: 'compact' | 'normal' | 'relaxed';
   lineSpacing: 'tight' | 'normal' | 'relaxed';
   primaryColor?: string;

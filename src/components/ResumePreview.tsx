@@ -193,6 +193,16 @@ export const ResumePreview: React.FC<Props> = ({
 
   const getFontFamily = () => {
     switch (design?.fontFamily) {
+      case 'lato': return "'Lato', sans-serif";
+      case 'raleway': return "'Raleway', sans-serif";
+      case 'bitter': return "'Bitter', serif";
+      case 'exo2': return "'Exo 2', sans-serif";
+      case 'chivo': return "'Chivo', sans-serif";
+      case 'tinos': return "'Tinos', 'Times New Roman', Times, serif";
+      case 'montserrat': return "'Montserrat', sans-serif";
+      case 'oswald': return "'Oswald', sans-serif";
+      case 'volkhov': return "'Volkhov', Georgia, serif";
+      case 'gelasio': return "'Gelasio', Georgia, serif";
       case 'roboto': return "'Roboto', sans-serif";
       case 'merriweather': return "'Merriweather', serif";
       case 'garamond': return "'EB Garamond', 'Garamond', Georgia, serif";
@@ -1926,8 +1936,8 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900 font-sans`}
-            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6 leading-snug' : 'p-6 sm:p-10 leading-relaxed'} text-slate-900`}
+            style={{ fontFamily: getFontFamily(), fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Top Header */}
             <header className={`border-b-2 border-slate-900 ${is2PageFit ? 'pb-2 mb-2.5' : 'pb-3 mb-4'}`}>
@@ -2105,8 +2115,8 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
-            style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
+            style={{ fontFamily: getFontFamily(), fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header with modern indigo pill */}
             <header className="pb-4 mb-5 border-b-2 border-indigo-600">
@@ -2233,8 +2243,8 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 font-serif leading-tight`}
-            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${is2PageFit ? 'p-4 sm:p-6' : 'p-6 sm:p-10'} text-slate-950 leading-tight`}
+            style={{ fontFamily: getFontFamily(), fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Header: Centered, High Density */}
             <header className="text-center pb-2 mb-3 border-b-2 border-slate-950">
@@ -2377,8 +2387,8 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 font-sans leading-normal`}
-            style={{ fontSize: is2PageFit ? '9pt' : '10pt' }}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
+            style={{ fontFamily: getFontFamily(), fontSize: is2PageFit ? '9pt' : '10pt' }}
           >
             {/* Tech Header */}
             <header className="border-b border-slate-200 pb-4 mb-5">
@@ -2526,10 +2536,8 @@ export const ResumePreview: React.FC<Props> = ({
           <div
             id="resume-printable-area"
             data-fit-two-pages={is2PageFit ? 'true' : 'false'}
-            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal ${
-              template === 'harvard' ? 'font-serif' : 'font-sans'
-            }`}
-            style={{ fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
+            className={`pdf-page resume-paper bg-white shadow-xl rounded-sm w-[800px] min-w-[800px] mx-auto min-h-[1100px] ${containerPadding} text-slate-900 leading-normal`}
+            style={{ fontFamily: getFontFamily(), fontSize: is2PageFit ? '9.5pt' : '10.5pt' }}
           >
             {/* Header */}
             <header className={`border-b border-slate-900 ${is2PageFit ? 'pb-2 mb-2' : 'pb-3 mb-4'} text-center`}>

@@ -36,12 +36,28 @@ const COLOR_PRESETS = [
   { name: 'Charcoal Minimal', value: '#27272a', bgClass: 'bg-zinc-800' }
 ];
 
-const FONT_OPTIONS: { id: ResumeDesignSettings['fontFamily']; label: string; sample: string; cssFamily: string }[] = [
-  { id: 'inter', label: 'Inter (Modern ATS Standard)', sample: 'Clean, legible, and engineered for high scan precision', cssFamily: "'Inter', sans-serif" },
-  { id: 'roboto', label: 'Roboto (Clean Tech)', sample: 'Crisp geometric clarity favored by tech & engineering recruiters', cssFamily: "'Roboto', sans-serif" },
-  { id: 'merriweather', label: 'Merriweather (Executive Serif)', sample: 'Distinguished editorial elegance for management & consulting', cssFamily: "'Merriweather', serif" },
-  { id: 'garamond', label: 'Garamond (Ivy League Classical)', sample: 'Timeless literary sophistication for legal, academia & finance', cssFamily: "'Garamond', serif" },
-  { id: 'sans', label: 'System Clean (Fast Native)', sample: 'Universal high-contrast native OS sans-serif', cssFamily: "system-ui, sans-serif" }
+const FONT_OPTIONS: {
+  id: ResumeDesignSettings['fontFamily'];
+  label: string;
+  subtitle?: string;
+  sample: string;
+  cssFamily: string;
+}[] = [
+  { id: 'lato', label: 'Lato', sample: 'Modern, balanced and warm humanist sans-serif', cssFamily: "'Lato', sans-serif" },
+  { id: 'raleway', label: 'Raleway', sample: 'Elegant, modern headings with clean geometric precision', cssFamily: "'Raleway', sans-serif" },
+  { id: 'bitter', label: 'Bitter', sample: 'Contemporary slab serif designed for maximum screen & print readability', cssFamily: "'Bitter', serif" },
+  { id: 'exo2', label: 'Exo 2', sample: 'Contemporary futuristic geometric font with crisp technology aesthetics', cssFamily: "'Exo 2', sans-serif" },
+  { id: 'chivo', label: 'Chivo', sample: 'Modern neo-grotesque with confident, high-impact presence', cssFamily: "'Chivo', sans-serif" },
+  { id: 'tinos', label: 'Tinos', subtitle: 'Times New Roman-like font', sample: 'Familiar executive elegance engineered for dense ATS resumes', cssFamily: "'Tinos', 'Times New Roman', Times, serif" },
+  { id: 'montserrat', label: 'Montserrat', sample: 'Distinguished urban geometric sans favored in modern corporate portfolios', cssFamily: "'Montserrat', sans-serif" },
+  { id: 'oswald', label: 'Oswald', sample: 'Space-efficient condensed typography optimized for compact layout', cssFamily: "'Oswald', sans-serif" },
+  { id: 'volkhov', label: 'Volkhov', sample: 'Robust, authoritative editorial serif with warm literary dignity', cssFamily: "'Volkhov', Georgia, serif" },
+  { id: 'gelasio', label: 'Gelasio', subtitle: 'Georgia-like font', sample: 'Refined book serif with generous proportions and graceful serifs', cssFamily: "'Gelasio', Georgia, serif" },
+  { id: 'inter', label: 'Inter', subtitle: 'Modern ATS Standard', sample: 'Clean, legible, and engineered for high scan precision', cssFamily: "'Inter', sans-serif" },
+  { id: 'roboto', label: 'Roboto', subtitle: 'Clean Tech Standard', sample: 'Crisp geometric clarity favored by tech & engineering recruiters', cssFamily: "'Roboto', sans-serif" },
+  { id: 'merriweather', label: 'Merriweather', subtitle: 'Executive Serif', sample: 'Distinguished editorial elegance for management & consulting', cssFamily: "'Merriweather', serif" },
+  { id: 'garamond', label: 'EB Garamond', subtitle: 'Classical Ivy League', sample: 'Timeless literary sophistication for legal, academia & finance', cssFamily: "'EB Garamond', 'Garamond', Georgia, serif" },
+  { id: 'sans', label: 'System Clean', subtitle: 'Fast Native Sans', sample: 'Universal high-contrast native OS sans-serif', cssFamily: "system-ui, -apple-system, sans-serif" }
 ];
 
 export const DesignFontModal: React.FC<Props> = ({
@@ -54,6 +70,7 @@ export const DesignFontModal: React.FC<Props> = ({
 
   const [design, setDesign] = useState<ResumeDesignSettings>(currentDesign);
   const [photoUrl, setPhotoUrl] = useState<string>(resume.photoUrl || '');
+  const [fontSavedAlert, setFontSavedAlert] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -75,6 +92,16 @@ export const DesignFontModal: React.FC<Props> = ({
     setPhotoUrl('');
     setDesign(d => ({ ...d, showPhoto: false }));
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSaveFont = () => {
+    onChange({
+      ...resume,
+      photoUrl: photoUrl || undefined,
+      design
+    });
+    setFontSavedAlert(true);
+    setTimeout(() => setFontSavedAlert(false), 2200);
   };
 
   const handleApply = () => {
@@ -117,40 +144,68 @@ export const DesignFontModal: React.FC<Props> = ({
         {/* Form Body */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[65vh]">
           
-          {/* 1. Typography / Font Family */}
+          {/* 1. Typography / Font Style */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Type className="w-4 h-4 text-indigo-500" />
-              Font Family
-            </label>
-            <div className="space-y-2">
-              {FONT_OPTIONS.map((f) => (
-                <div
-                  key={f.id}
-                  onClick={() => setDesign(d => ({ ...d, fontFamily: f.id }))}
-                  className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
-                    design.fontFamily === f.id
-                      ? 'border-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Type className="w-4 h-4 text-emerald-600" />
+                Font Style
+              </label>
+              <span className="text-[11px] text-slate-400 font-medium">
+                {FONT_OPTIONS.find(f => f.id === design.fontFamily)?.label} selected
+              </span>
+            </div>
+
+            <div className="border border-slate-200 rounded-2xl bg-white shadow-2xs overflow-hidden">
+              <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-100 p-1.5 space-y-0.5">
+                {FONT_OPTIONS.map((f) => {
+                  const isSelected = design.fontFamily === f.id;
+                  return (
+                    <div
+                      key={f.id}
+                      onClick={() => setDesign(d => ({ ...d, fontFamily: f.id }))}
+                      className={`p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-emerald-50/70 border border-emerald-300 ring-1 ring-emerald-400/40 text-emerald-900'
+                          : 'hover:bg-slate-50 border border-transparent text-slate-800'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-3">
+                        <div
+                          className={`text-base font-medium leading-snug ${
+                            isSelected ? 'text-emerald-700 font-bold' : 'text-slate-900'
+                          }`}
+                          style={{ fontFamily: f.cssFamily }}
+                        >
+                          {f.label}
+                        </div>
+                        {f.subtitle && (
+                          <p className="text-xs text-slate-500 mt-0.5 font-normal">
+                            {f.subtitle}
+                          </p>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Save Font Button */}
+              <div className="p-3 bg-slate-50/90 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={handleSaveFont}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <div className="min-w-0 pr-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900" style={{ fontFamily: f.cssFamily }}>
-                        {f.label}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5" style={{ fontFamily: f.cssFamily }}>
-                      {f.sample}
-                    </p>
-                  </div>
-                  {design.fontFamily === f.id && (
-                    <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                      <Check className="w-3 h-3 stroke-[3]" />
-                    </div>
-                  )}
-                </div>
-              ))}
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>{fontSavedAlert ? '✓ Font Saved & Applied' : 'Save Font'}</span>
+                </button>
+              </div>
             </div>
           </div>
 
