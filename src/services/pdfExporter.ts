@@ -107,6 +107,11 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
       format: 'a4'
     });
 
+    // Ensure all web fonts are fully resolved prior to canvas capture
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+
     const isExplicitTwoSheet = pageElements.length === 2;
 
     for (let i = 0; i < pageElements.length; i++) {
@@ -131,7 +136,7 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
         }
       });
 
-      // Standard A4 aspect ratio canvas
+      // Standard A4 aspect ratio canvas (210mm x 297mm)
       const a4Aspect = A4_HEIGHT_MM / A4_WIDTH_MM; // ~1.4142857
       const targetWidth = canvas.width;
       const targetHeight = Math.round(canvas.width * a4Aspect);
@@ -149,8 +154,29 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
         if (fCtx) {
           fCtx.fillStyle = '#ffffff';
           fCtx.fillRect(0, 0, targetWidth, targetHeight);
-          // Scale entire sheet cleanly to fit the exact A4 page without cutting off sections
-          fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+          fCtx.imageSmoothingEnabled = true;
+          fCtx.imageSmoothingQuality = 'high';
+
+          // STRICT UNIFORM ASPECT RATIO (Sx === Sy):
+          // NEVER stretch or squash text! Both axes scale by the exact same ratio.
+          if (canvas.height > targetHeight) {
+            const scale = targetHeight / canvas.height;
+            const drawWidth = canvas.width * scale;
+            const drawHeight = targetHeight;
+            const offsetX = Math.round((targetWidth - drawWidth) / 2);
+            fCtx.drawImage(
+              canvas,
+              0, 0, canvas.width, canvas.height,
+              offsetX, 0, drawWidth, drawHeight
+            );
+          } else {
+            // Content naturally fits within A4 height: draw at 100% native scale without any distortion
+            fCtx.drawImage(
+              canvas,
+              0, 0, canvas.width, canvas.height,
+              0, 0, canvas.width, canvas.height
+            );
+          }
         }
         pageCanvas = fittedCanvas;
       } else {
@@ -168,6 +194,8 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
             if (sCtx) {
               sCtx.fillStyle = '#ffffff';
               sCtx.fillRect(0, 0, targetWidth, targetHeight);
+              sCtx.imageSmoothingEnabled = true;
+              sCtx.imageSmoothingQuality = 'high';
               sCtx.drawImage(canvas, 0, currentY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
             }
             const sliceImgData = sliceCanvas.toDataURL('image/png');
@@ -180,7 +208,7 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
           }
           continue;
         } else {
-          // Under or moderately over A4 height: fit smoothly onto A4 page
+          // Under or moderately over A4 height: fit smoothly onto A4 page with STRICT UNIFORM ASPECT RATIO
           const fittedCanvas = document.createElement('canvas');
           fittedCanvas.width = targetWidth;
           fittedCanvas.height = targetHeight;
@@ -188,7 +216,17 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
           if (fCtx) {
             fCtx.fillStyle = '#ffffff';
             fCtx.fillRect(0, 0, targetWidth, targetHeight);
-            fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, targetWidth, targetHeight);
+            fCtx.imageSmoothingEnabled = true;
+            fCtx.imageSmoothingQuality = 'high';
+            if (canvas.height > targetHeight) {
+              const scale = targetHeight / canvas.height;
+              const drawWidth = canvas.width * scale;
+              const drawHeight = targetHeight;
+              const offsetX = Math.round((targetWidth - drawWidth) / 2);
+              fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, offsetX, 0, drawWidth, drawHeight);
+            } else {
+              fCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+            }
           }
           pageCanvas = fittedCanvas;
         }
@@ -264,7 +302,13 @@ export async function renderElementPdfPages(elementId: string): Promise<PdfRende
     if (sCtx) {
       sCtx.fillStyle = '#ffffff';
       sCtx.fillRect(0, 0, scaledCanvas.width, targetHeight);
-      sCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, targetHeight);
+      sCtx.imageSmoothingEnabled = true;
+      sCtx.imageSmoothingQuality = 'high';
+      const scale = targetHeight / canvas.height;
+      const drawWidth = canvas.width * scale;
+      const drawHeight = targetHeight;
+      const offsetX = Math.round((canvas.width - drawWidth) / 2);
+      sCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height, offsetX, 0, drawWidth, drawHeight);
       activeCanvas = scaledCanvas;
     }
   }
