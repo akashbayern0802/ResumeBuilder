@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ResumeData, ResumeTemplate, ResumeSectionId, AchievementItem, AchievementIconType } from '../types/resume';
+import { ResumeData, ResumeTemplate, ResumeSectionId, AchievementItem, AchievementIconType, WorkExperience } from '../types/resume';
 import {
   Award,
   Briefcase,
@@ -51,6 +51,15 @@ export function getEffectiveAchievements(resume: ResumeData): AchievementItem[] 
     }));
   }
   return [];
+}
+
+export function formatExpDates(exp: WorkExperience): string {
+  const start = exp.startDate?.trim() || '';
+  const end = exp.current ? 'Present' : (exp.endDate?.trim() || '');
+  if (start && end) return `${start} – ${end}`;
+  if (start) return start;
+  if (end) return end;
+  return '';
 }
 
 export function partitionResumeContent(resume: ResumeData, is2PageFit: boolean) {
@@ -543,7 +552,7 @@ export const ResumePreview: React.FC<Props> = ({
                       {/* Left Date + Dot Column */}
                       <div className="w-32 sm:w-36 shrink-0 flex items-start justify-between gap-1 pt-0.5">
                         <span className="font-bold text-slate-950 text-[11px] whitespace-nowrap">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          {formatExpDates(exp)}
                         </span>
                         <span className="text-slate-950 font-black text-sm leading-none shrink-0">•</span>
                       </div>
@@ -884,7 +893,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className="text-xs font-bold text-indigo-700"> @ {exp.company}</span>
                         </div>
                         <span className="text-[11px] font-semibold text-slate-500 shrink-0">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `| ${exp.location}` : ''}
+                          {formatExpDates(exp)} {exp.location ? `| ${exp.location}` : ''}
                         </span>
                       </div>
                       {exp.bullets && exp.bullets.length > 0 && (
@@ -1195,7 +1204,7 @@ export const ResumePreview: React.FC<Props> = ({
                             <span className={`${getFontSizeClass()} font-semibold text-slate-800`}> | {exp.company}</span>
                           </div>
                           <div className={`${getFontSizeClass()} text-slate-600 font-semibold italic shrink-0`}>
-                            {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                            {formatExpDates(exp)}
                             {exp.location ? ` (${exp.location})` : ''}
                           </div>
                         </div>
@@ -1555,7 +1564,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-semibold text-slate-800`}> | {exp.company}</span>
                         </div>
                         <div className={`${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 font-medium italic shrink-0`}>
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate} {exp.location ? `(${exp.location})` : ''}
+                          {formatExpDates(exp)} {exp.location ? `(${exp.location})` : ''}
                         </div>
                       </div>
                       <BulletList bullets={exp.bullets} bulletSpacing={bulletSpacing} fontSizeClass={getFontSizeClass()} />
@@ -1790,7 +1799,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className={`${is2PageFit ? 'text-[11px]' : 'text-[12px]'} font-bold text-slate-800`}>{exp.company}</span>
                         </div>
                         <div className={`flex justify-between items-baseline ${is2PageFit ? 'text-[10.5px]' : 'text-[11.5px]'} text-slate-600 italic`}>
-                          <span>{exp.startDate} – {exp.current ? 'Present' : exp.endDate}</span>
+                          <span>{formatExpDates(exp)}</span>
                           <span>{exp.location || ''}</span>
                         </div>
                       </div>
@@ -2070,7 +2079,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className={`${getFontSizeClass()} text-slate-700 font-semibold`}> — {exp.company}</span>
                         </div>
                         <div className={`${getFontSizeClass()} text-slate-600 font-medium italic shrink-0`}>
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          {formatExpDates(exp)}
                           {exp.location ? ` | ${exp.location}` : ''}
                         </div>
                       </div>
@@ -2172,7 +2181,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className="text-xs text-indigo-700 font-semibold"> @ {exp.company}</span>
                         </div>
                         <span className="text-xs text-slate-500 font-medium shrink-0">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          {formatExpDates(exp)}
                           {exp.location ? ` | ${exp.location}` : ''}
                         </span>
                       </div>
@@ -2284,7 +2293,7 @@ export const ResumePreview: React.FC<Props> = ({
                     <div key={exp.id}>
                       <div className="flex justify-between items-baseline text-xs">
                         <span className="font-bold">{exp.company}</span>
-                        <span className="italic">{exp.startDate} – {exp.current ? 'Present' : exp.endDate}</span>
+                        <span className="italic">{formatExpDates(exp)}</span>
                       </div>
                       <div className="flex justify-between items-baseline text-xs italic text-slate-800">
                         <span>{exp.role}</span>
@@ -2438,7 +2447,7 @@ export const ResumePreview: React.FC<Props> = ({
                           {exp.role} <span className="text-primary-600 font-normal">@ {exp.company}</span>
                         </div>
                         <span className="text-[11px] font-mono text-slate-500">
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          {formatExpDates(exp)}
                         </span>
                       </div>
                       <BulletList bullets={exp.bullets} bulletSpacing="mt-1 space-y-1" fontSizeClass="text-xs text-slate-700 leading-relaxed" />
@@ -2610,7 +2619,7 @@ export const ResumePreview: React.FC<Props> = ({
                           <span className={`${getFontSizeClass()} text-slate-800 font-semibold`}> | {exp.company}</span>
                         </div>
                         <div className={`${getFontSizeClass()} text-slate-600 font-medium italic shrink-0`}>
-                          {exp.startDate} – {exp.current ? 'Present' : exp.endDate}
+                          {formatExpDates(exp)}
                           {exp.location ? ` | ${exp.location}` : ''}
                         </div>
                       </div>

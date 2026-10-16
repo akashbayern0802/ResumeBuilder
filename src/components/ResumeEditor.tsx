@@ -27,6 +27,8 @@ import {
   Maximize2,
   Minimize2,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Palette,
   Trophy,
   Globe,
@@ -128,6 +130,44 @@ export const ResumeEditor: React.FC<Props> = ({
     });
   };
 
+  const handleUpdateExpMultiple = (id: string, updates: Partial<WorkExperience>) => {
+    onChange({
+      ...resume,
+      experience: resume.experience.map(e => e.id === id ? { ...e, ...updates } : e)
+    });
+  };
+
+  const handleMoveExp = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= resume.experience.length) return;
+    const newExp = [...resume.experience];
+    const temp = newExp[index];
+    newExp[index] = newExp[targetIndex];
+    newExp[targetIndex] = temp;
+    onChange({
+      ...resume,
+      experience: newExp
+    });
+  };
+
+  const handleMoveBullet = (expId: string, bIndex: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? bIndex - 1 : bIndex + 1;
+    onChange({
+      ...resume,
+      experience: resume.experience.map(e => {
+        if (e.id === expId) {
+          if (targetIndex < 0 || targetIndex >= e.bullets.length) return e;
+          const newBullets = [...e.bullets];
+          const temp = newBullets[bIndex];
+          newBullets[bIndex] = newBullets[targetIndex];
+          newBullets[targetIndex] = temp;
+          return { ...e, bullets: newBullets };
+        }
+        return e;
+      })
+    });
+  };
+
   const handleDeleteExp = (id: string) => {
     onChange({
       ...resume,
@@ -220,6 +260,19 @@ export const ResumeEditor: React.FC<Props> = ({
     });
   };
 
+  const handleMoveCategory = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= resume.skills.length) return;
+    const newSkills = [...resume.skills];
+    const temp = newSkills[index];
+    newSkills[index] = newSkills[targetIndex];
+    newSkills[targetIndex] = temp;
+    onChange({
+      ...resume,
+      skills: newSkills
+    });
+  };
+
   // Projects handlers
   const handleAddProject = () => {
     const newProj: Project = {
@@ -232,6 +285,19 @@ export const ResumeEditor: React.FC<Props> = ({
     onChange({
       ...resume,
       projects: [...resume.projects, newProj]
+    });
+  };
+
+  const handleMoveProject = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= resume.projects.length) return;
+    const newProjects = [...resume.projects];
+    const temp = newProjects[index];
+    newProjects[index] = newProjects[targetIndex];
+    newProjects[targetIndex] = temp;
+    onChange({
+      ...resume,
+      projects: newProjects
     });
   };
 
@@ -433,6 +499,64 @@ export const ResumeEditor: React.FC<Props> = ({
     onChange({
       ...resume,
       education: resume.education.filter(ed => ed.id !== id)
+    });
+  };
+
+  const handleMoveEducation = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= resume.education.length) return;
+    const newEdu = [...resume.education];
+    const temp = newEdu[index];
+    newEdu[index] = newEdu[targetIndex];
+    newEdu[targetIndex] = temp;
+    onChange({
+      ...resume,
+      education: newEdu
+    });
+  };
+
+  const handleMoveCertification = (index: number, direction: 'up' | 'down') => {
+    const certs = resume.certifications || [];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= certs.length) return;
+    const newCerts = [...certs];
+    const temp = newCerts[index];
+    newCerts[index] = newCerts[targetIndex];
+    newCerts[targetIndex] = temp;
+    onChange({
+      ...resume,
+      certifications: newCerts
+    });
+  };
+
+  const handleMoveAchievement = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= effectiveAchievements.length) return;
+    const newAch = [...effectiveAchievements];
+    const temp = newAch[index];
+    newAch[index] = newAch[targetIndex];
+    newAch[targetIndex] = temp;
+    onChange({
+      ...resume,
+      achievements: newAch
+    });
+  };
+
+  const handleMoveCustomItem = (sectionId: string, index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    onChange({
+      ...resume,
+      customSections: (resume.customSections || []).map(cs => {
+        if (cs.id === sectionId) {
+          if (targetIndex < 0 || targetIndex >= cs.items.length) return cs;
+          const newItems = [...cs.items];
+          const temp = newItems[index];
+          newItems[index] = newItems[targetIndex];
+          newItems[targetIndex] = temp;
+          return { ...cs, items: newItems };
+        }
+        return cs;
+      })
     });
   };
 
@@ -769,7 +893,7 @@ export const ResumeEditor: React.FC<Props> = ({
               </button>
             </div>
 
-            {resume.experience.map((exp) => {
+            {resume.experience.map((exp, expIdx) => {
               const isExpanded = expandedExp[exp.id] ?? true;
               return (
                 <div
@@ -782,11 +906,32 @@ export const ResumeEditor: React.FC<Props> = ({
                       onClick={() => setExpandedExp({ ...expandedExp, [exp.id]: !isExpanded })}
                       className="flex items-center gap-2 cursor-pointer flex-1 font-semibold text-xs text-slate-900"
                     >
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700">
+                        #{expIdx + 1}
+                      </span>
                       {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                      <span>{exp.role || 'Role'} at {exp.company || 'Company'}</span>
+                      <span className="truncate">{exp.role || 'Role'} at {exp.company || 'Company'}</span>
                     </div>
 
                     <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleMoveExp(expIdx, 'up')}
+                        disabled={expIdx === 0}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Move Company Up"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleMoveExp(expIdx, 'down')}
+                        disabled={expIdx === resume.experience.length - 1}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        title="Move Company Down"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteExp(exp.id)}
@@ -808,7 +953,7 @@ export const ResumeEditor: React.FC<Props> = ({
                             type="text"
                             value={exp.role}
                             onChange={(e) => handleUpdateExp(exp.id, 'role', e.target.value)}
-                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                         </div>
 
@@ -818,33 +963,58 @@ export const ResumeEditor: React.FC<Props> = ({
                             type="text"
                             value={exp.company}
                             onChange={(e) => handleUpdateExp(exp.id, 'company', e.target.value)}
-                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Dates</label>
+                          <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Start Date</label>
                           <input
                             type="text"
-                            value={`${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}`}
-                            onChange={(e) => {
-                              const parts = e.target.value.split('-');
-                              handleUpdateExp(exp.id, 'startDate', parts[0]?.trim() || '');
-                              handleUpdateExp(exp.id, 'endDate', parts[1]?.trim() || '');
-                            }}
-                            placeholder="2022-01 - Present"
-                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                            value={exp.startDate || ''}
+                            onChange={(e) => handleUpdateExp(exp.id, 'startDate', e.target.value)}
+                            placeholder="e.g. 2021-06 or Jun 2021"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                         </div>
 
                         <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[10px] uppercase font-bold text-slate-500">End Date</label>
+                            <label className="inline-flex items-center gap-1 text-[10px] font-medium text-primary-700 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={!!exp.current}
+                                onChange={(e) => {
+                                  const isCurrent = e.target.checked;
+                                  handleUpdateExpMultiple(exp.id, {
+                                    current: isCurrent,
+                                    endDate: isCurrent ? 'Present' : (exp.endDate === 'Present' ? '' : exp.endDate)
+                                  });
+                                }}
+                                className="w-3 h-3 rounded text-primary-600 focus:ring-primary-500 border-slate-300"
+                              />
+                              <span>Current Role</span>
+                            </label>
+                          </div>
+                          <input
+                            type="text"
+                            value={exp.current ? 'Present' : (exp.endDate || '')}
+                            disabled={exp.current}
+                            onChange={(e) => handleUpdateExp(exp.id, 'endDate', e.target.value)}
+                            placeholder="e.g. 2024-05 or Present"
+                            className={`w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 ${exp.current ? 'bg-slate-100 text-slate-500 cursor-not-allowed italic' : ''}`}
+                          />
+                        </div>
+
+                        <div className="col-span-2">
                           <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Location</label>
                           <input
                             type="text"
                             value={exp.location || ''}
                             onChange={(e) => handleUpdateExp(exp.id, 'location', e.target.value)}
-                            placeholder="San Francisco, CA"
-                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white"
+                            placeholder="e.g. San Francisco, CA or Remote"
+                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary-500"
                           />
                         </div>
                       </div>
@@ -874,6 +1044,24 @@ export const ResumeEditor: React.FC<Props> = ({
                               className="flex-1 p-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-800 leading-relaxed resize-y"
                             />
                             <div className="flex flex-col gap-1 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveBullet(exp.id, bIdx, 'up')}
+                                disabled={bIdx === 0}
+                                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Move bullet up"
+                              >
+                                <ArrowUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveBullet(exp.id, bIdx, 'down')}
+                                disabled={bIdx === exp.bullets.length - 1}
+                                className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                title="Move bullet down"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5" />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => onOptimizeBullet(exp.id, bIdx)}
@@ -919,7 +1107,7 @@ export const ResumeEditor: React.FC<Props> = ({
               </button>
             </div>
 
-            {resume.skills.map((cat) => (
+            {resume.skills.map((cat, catIdx) => (
               <div key={cat.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <input
@@ -931,15 +1119,36 @@ export const ResumeEditor: React.FC<Props> = ({
                     }}
                     className="font-bold text-xs text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-primary-500 focus:outline-none px-1 py-0.5"
                   />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange({ ...resume, skills: resume.skills.filter(c => c.id !== cat.id) });
-                    }}
-                    className="text-slate-400 hover:text-rose-600 p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCategory(catIdx, 'up')}
+                      disabled={catIdx === 0}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move category up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCategory(catIdx, 'down')}
+                      disabled={catIdx === resume.skills.length - 1}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move category down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange({ ...resume, skills: resume.skills.filter(c => c.id !== cat.id) });
+                      }}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                      title="Delete category"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Skill badges */}
@@ -1021,18 +1230,39 @@ export const ResumeEditor: React.FC<Props> = ({
                     <Award className="w-4 h-4 text-indigo-600 shrink-0" />
                     <span>{cert}</span>
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onChange({
-                        ...resume,
-                        certifications: resume.certifications?.filter((_, i) => i !== index)
-                      });
-                    }}
-                    className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCertification(index, 'up')}
+                      disabled={index === 0}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move certification up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveCertification(index, 'down')}
+                      disabled={index === (resume.certifications?.length || 0) - 1}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move certification down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onChange({
+                          ...resume,
+                          certifications: resume.certifications?.filter((_, i) => i !== index)
+                        });
+                      }}
+                      className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                      title="Delete certification"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1083,7 +1313,7 @@ export const ResumeEditor: React.FC<Props> = ({
               </button>
             </div>
 
-            {resume.projects.map((proj) => (
+            {resume.projects.map((proj, projIdx) => (
               <div key={proj.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
@@ -1100,13 +1330,34 @@ export const ResumeEditor: React.FC<Props> = ({
                       className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteProject(proj.id)}
-                    className="text-slate-400 hover:text-rose-600 p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveProject(projIdx, 'up')}
+                      disabled={projIdx === 0}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move project up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveProject(projIdx, 'down')}
+                      disabled={projIdx === resume.projects.length - 1}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move project down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProject(proj.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                      title="Delete project"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1158,7 +1409,7 @@ export const ResumeEditor: React.FC<Props> = ({
               </button>
             </div>
 
-            {resume.education.map((edu) => (
+            {resume.education.map((edu, eduIdx) => (
               <div key={edu.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/40 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <input
@@ -1168,13 +1419,34 @@ export const ResumeEditor: React.FC<Props> = ({
                     placeholder="Degree (e.g. B.S. in Computer Science)"
                     className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
                   />
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteEducation(edu.id)}
-                    className="text-slate-400 hover:text-rose-600 p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveEducation(eduIdx, 'up')}
+                      disabled={eduIdx === 0}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move education up"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveEducation(eduIdx, 'down')}
+                      disabled={eduIdx === resume.education.length - 1}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      title="Move education down"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEducation(edu.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1"
+                      title="Delete education"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1237,7 +1509,7 @@ export const ResumeEditor: React.FC<Props> = ({
               </div>
             ) : (
               <div className="space-y-3">
-                {effectiveAchievements.map((ach) => (
+                {effectiveAchievements.map((ach, achIdx) => (
                   <div key={ach.id} className="border border-amber-200/80 rounded-xl p-3.5 bg-amber-50/20 space-y-2.5 shadow-2xs">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-1">
@@ -1254,14 +1526,34 @@ export const ResumeEditor: React.FC<Props> = ({
                           className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
                         />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAchievement(ach.id)}
-                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                        title="Delete Achievement"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveAchievement(achIdx, 'up')}
+                          disabled={achIdx === 0}
+                          className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-amber-100/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Move achievement up"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveAchievement(achIdx, 'down')}
+                          disabled={achIdx === effectiveAchievements.length - 1}
+                          className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-amber-100/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Move achievement down"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAchievement(ach.id)}
+                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                          title="Delete Achievement"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -1334,7 +1626,7 @@ export const ResumeEditor: React.FC<Props> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {cs.items.map((it) => (
+                  {cs.items.map((it, itIdx) => (
                     <div key={it.id} className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/40 space-y-2.5 shadow-2xs">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1">
@@ -1351,13 +1643,34 @@ export const ResumeEditor: React.FC<Props> = ({
                             className="font-bold text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1 flex-1"
                           />
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCustomItem(cs.id, it.id)}
-                          className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleMoveCustomItem(cs.id, itIdx, 'up')}
+                            disabled={itIdx === 0}
+                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Move item up"
+                          >
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveCustomItem(cs.id, itIdx, 'down')}
+                            disabled={itIdx === cs.items.length - 1}
+                            className="p-1 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-200/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Move item down"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomItem(cs.id, it.id)}
+                            className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                            title="Delete item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 text-xs">
